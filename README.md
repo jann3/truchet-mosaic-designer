@@ -95,3 +95,25 @@ undoable, so a whole paint drag (many tile updates) or a grid regeneration (the 
 button, now wired through history too) each undo as a single step. Wired to toolbar Undo/Redo
 buttons (enabled state follows `canUndo`/`canRedo`) and to Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z / Ctrl+Y,
 guarded to skip while a text input has focus.
+
+### Phase 6 — Selection System ✅
+
+Named, reusable selections now live on the document (`TruchetDocument.selections`, each a
+`{ id, name, triangleIds }`) — distinct from Phase 5's ephemeral `SelectionEngine`, which still
+drives hover/click highlighting but no longer owns anything persistent. A new Inspector section
+(`src/ui/SelectionsPanel.ts`) lists them with create/rename (inline, click the pencil)/duplicate/
+delete, plus a set of one-shot tools (`src/document/selectionOperations.ts`) that replace the active
+selection's contents: Select All, Invert, Select Colour (the 'a'/'b' half — always dark/light
+regardless of tile orientation), Select Orientation (both triangles of every matching tile), and
+Select Row/Column.
+
+The canvas itself gained a second interaction mode. A new Edit/Select toggle in the toolbar
+(`EditorModeStore`) switches `GridEditingController` between Phase 5's flip/paint behaviour and a
+select mode where click/drag instead toggles triangles into or out of the active selection
+(`ActiveSelectionStore` tracks which one) — no shift key needed, since every gesture in this mode is
+already a selection edit. Activating a selection from the panel (or hitting "+ New") auto-switches
+to select mode so it's immediately editable. A small binder in `CanvasArea.ts` keeps
+`SelectionEngine`'s highlighted set mirroring the active selection's `triangleIds` while in select
+mode, so the existing Phase 5 highlight-diffing in `TruchetRenderer` renders it with no renderer
+changes needed. All of it goes through the same `HistoryManager` as tile edits, so selection edits
+undo/redo alongside grid edits.

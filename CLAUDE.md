@@ -10,55 +10,9 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–5 (application shell, document model, grid rendering, grid configuration controls, grid
-editing UX) are complete — see `README.md`'s "Implementation progress" section for what shipped and
-where.
-
----
-
-# Phase 6 — Selection System
-
-## Goal
-
-Create reusable selections independent from layers.
-
-This is a major architectural milestone.
-
-## Features
-
-Selection panel:
-
-```
-Selections
-
-✓ Black Triangles
-
-✓ White Triangles
-
-✓ Portrait Area
-
-✓ Custom Selection
-```
-
-Selections can be:
-
-* created
-* renamed
-* edited
-* duplicated
-* deleted
-
-## Selection tools
-
-Implement:
-
-* select triangle
-* select colour
-* select orientation
-* select row
-* select column
-* invert selection
-* select all
+Phases 1–6 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX, selection system) are complete — see `README.md`'s "Implementation progress" section
+for what shipped and where.
 
 ---
 

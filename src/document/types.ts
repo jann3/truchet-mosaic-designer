@@ -58,7 +58,8 @@ export interface Layer {
 export interface Selection {
   id: string;
   name: string;
-  tileIds: string[];
+  /** Triangle ids in `${tileId}:a` / `${tileId}:b` form — see `getTriangleId`. */
+  triangleIds: string[];
 }
 
 export interface Asset {

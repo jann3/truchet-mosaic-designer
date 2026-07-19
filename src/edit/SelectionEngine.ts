@@ -7,6 +7,14 @@ type Listener = (state: SelectionState) => void;
 
 const EMPTY_SELECTION: ReadonlySet<string> = new Set();
 
+function setsAreEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const id of a) {
+    if (!b.has(id)) return false;
+  }
+  return true;
+}
+
 /**
  * Ephemeral triangle-level hover/selection state for the grid editor. Distinct
  * from the reusable, named `Selection`s introduced in Phase 6 — this is just
@@ -30,6 +38,14 @@ export class SelectionEngine {
   /** Replaces the selection with a single triangle. */
   select(triangleId: string): void {
     this.selectedTriangleIds = new Set([triangleId]);
+    this.notify();
+  }
+
+  /** Replaces the whole selection — used to mirror an active named Selection's contents. */
+  setSelected(triangleIds: Iterable<string>): void {
+    const next = new Set(triangleIds);
+    if (setsAreEqual(next, this.selectedTriangleIds)) return;
+    this.selectedTriangleIds = next;
     this.notify();
   }
 

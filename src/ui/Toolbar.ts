@@ -1,4 +1,5 @@
 import type { HistoryManager } from '../edit/HistoryManager';
+import type { EditorModeStore } from '../edit/EditorModeStore';
 
 export interface ToolbarHandle {
   element: HTMLElement;
@@ -27,7 +28,31 @@ function createActionButton(label: string, ariaLabel: string): HTMLButtonElement
   return button;
 }
 
-export function createToolbar(history: HistoryManager): ToolbarHandle {
+function createModeGroup(editorMode: EditorModeStore): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'toolbar__group';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', 'Canvas tool');
+
+  const editButton = createActionButton('Edit', 'Edit tool: click or drag to flip tile orientation');
+  const selectButton = createActionButton('Select', 'Select tool: click or drag to build the active selection');
+
+  const updateButtons = (): void => {
+    const mode = editorMode.get();
+    editButton.setAttribute('aria-pressed', String(mode === 'edit'));
+    selectButton.setAttribute('aria-pressed', String(mode === 'select'));
+  };
+  updateButtons();
+  editorMode.subscribe(updateButtons);
+
+  editButton.addEventListener('click', () => editorMode.set('edit'));
+  selectButton.addEventListener('click', () => editorMode.set('select'));
+
+  group.append(editButton, selectButton);
+  return group;
+}
+
+export function createToolbar(history: HistoryManager, editorMode: EditorModeStore): ToolbarHandle {
   const element = document.createElement('header');
   element.className = 'toolbar';
   element.setAttribute('role', 'banner');
@@ -56,6 +81,8 @@ export function createToolbar(history: HistoryManager): ToolbarHandle {
 
   historyGroup.append(undoButton, redoButton);
 
+  const modeGroup = createModeGroup(editorMode);
+
   const spacer = document.createElement('div');
   spacer.className = 'toolbar__spacer';
 
@@ -68,7 +95,7 @@ export function createToolbar(history: HistoryManager): ToolbarHandle {
   const inspectorButton = createToggleButton('Inspector');
 
   panelGroup.append(layersButton, inspectorButton);
-  element.append(brand, historyGroup, spacer, panelGroup);
+  element.append(brand, historyGroup, modeGroup, spacer, panelGroup);
 
   return { element, layersButton, inspectorButton, undoButton, redoButton };
 }
