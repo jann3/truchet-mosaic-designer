@@ -63,6 +63,21 @@ export interface Layer {
   /** References a Selection by id, or null to mean "no tiles yet". */
   selectionId: string | null;
   fill: LayerFill;
+  /** References a LayerGroup by id, or null if this layer isn't grouped. */
+  groupId: string | null;
+}
+
+/**
+ * An organizational cluster of layers (Phase 9). Purely a Layers-panel/
+ * compositing convenience — membership is a tag on each `Layer`, not a tree
+ * structure, so grouping never changes how `layers` determines paint order.
+ */
+export interface LayerGroup {
+  id: string;
+  name: string;
+  visible: boolean;
+  opacity: number;
+  collapsed: boolean;
 }
 
 export interface Selection {
@@ -95,6 +110,7 @@ export interface TruchetDocument {
   aspectRatio: number;
   grid: Grid;
   layers: Layer[];
+  groups: LayerGroup[];
   selections: Selection[];
   assets: Asset[];
   exportSettings: ExportSettings;

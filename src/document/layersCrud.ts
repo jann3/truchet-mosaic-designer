@@ -12,8 +12,34 @@ export function createLayer(document: TruchetDocument, name: string): TruchetDoc
     blendMode: 'normal',
     selectionId: null,
     fill: { ...DEFAULT_FILL },
+    groupId: null,
   };
   return { ...document, layers: [...document.layers, layer] };
+}
+
+/** Swaps a layer with its neighbour one slot toward the top ('up') or bottom ('down') of the paint stack. */
+export function moveLayer(document: TruchetDocument, id: string, direction: 'up' | 'down'): TruchetDocument {
+  const layers = [...document.layers];
+  const index = layers.findIndex((layer) => layer.id === id);
+  if (index === -1) return document;
+
+  const targetIndex = direction === 'up' ? index + 1 : index - 1;
+  if (targetIndex < 0 || targetIndex >= layers.length) return document;
+
+  [layers[index], layers[targetIndex]] = [layers[targetIndex], layers[index]];
+  return { ...document, layers };
+}
+
+/** Clones a layer immediately above the original in the paint stack. */
+export function duplicateLayer(document: TruchetDocument, id: string): TruchetDocument {
+  const index = document.layers.findIndex((layer) => layer.id === id);
+  if (index === -1) return document;
+
+  const original = document.layers[index];
+  const clone: Layer = { ...original, id: generateId('layer'), name: `${original.name} copy` };
+  const layers = [...document.layers];
+  layers.splice(index + 1, 0, clone);
+  return { ...document, layers };
 }
 
 export function renameLayer(document: TruchetDocument, id: string, name: string): TruchetDocument {

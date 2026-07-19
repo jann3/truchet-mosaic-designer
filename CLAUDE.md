@@ -10,63 +10,9 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–8 (application shell, document model, grid rendering, grid configuration controls, grid
-editing UX, selection system, layer system, image mask system) are complete — see `README.md`'s
-"Implementation progress" section for what shipped and where.
-
----
-
-# Phase 9 — Advanced Composition Tools
-
-## Goal
-
-Add professional editing features.
-
-## Features
-
-### Blend modes
-
-Implement:
-
-* Normal
-* Multiply
-* Screen
-* Overlay
-* Difference
-* Darken
-* Lighten
-
----
-
-### Layer ordering
-
-Support:
-
-* reorder
-* duplicate
-* group
-* rename
-
----
-
-### Transform controls
-
-For layers:
-
-* move
-* scale
-* rotate
-* align
-
----
-
-### Symmetry tools
-
-Optional but valuable:
-
-* horizontal mirror
-* vertical mirror
-* rotational symmetry
+Phases 1–9 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX, selection system, layer system, image mask system, advanced composition tools) are
+complete — see `README.md`'s "Implementation progress" section for what shipped and where.
 
 ---
 

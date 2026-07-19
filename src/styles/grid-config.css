@@ -108,3 +108,23 @@
 .grid-config__generate:hover {
   filter: brightness(1.08);
 }
+
+.grid-config__symmetry-row {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.grid-config__symmetry-button {
+  flex: 1 1 0;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 1rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.grid-config__symmetry-button:hover {
+  border-color: var(--color-accent);
+}

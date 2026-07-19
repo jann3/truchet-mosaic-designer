@@ -109,9 +109,13 @@ export class TruchetRenderer {
     this.defs.replaceChildren();
 
     const tileById = new Map(doc.grid.tiles.map((tile) => [tile.id, tile]));
+    const groupById = new Map(doc.groups.map((group) => [group.id, group]));
 
     for (const layer of doc.layers) {
-      if (!layer.visible || layer.opacity <= 0) continue;
+      const group = layer.groupId ? groupById.get(layer.groupId) : undefined;
+      const effectiveVisible = layer.visible && (!group || group.visible);
+      const effectiveOpacity = layer.opacity * (group ? group.opacity : 1);
+      if (!effectiveVisible || effectiveOpacity <= 0) continue;
       const selection = layer.selectionId ? doc.selections.find((s) => s.id === layer.selectionId) : null;
       if (!selection || selection.triangleIds.length === 0) continue;
 
@@ -121,7 +125,7 @@ export class TruchetRenderer {
       if (trianglePoints.length === 0) continue;
 
       const g = document.createElementNS(SVG_NS, 'g');
-      g.style.opacity = String(layer.opacity);
+      g.style.opacity = String(effectiveOpacity);
       g.style.mixBlendMode = layer.blendMode;
 
       if (layer.fill.type === 'solid') {

@@ -1,10 +1,12 @@
 import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
 import type { SelectedLayerStore } from '../edit/SelectedLayerStore';
-import type { Asset, BlendMode, Layer, LayerFill, Selection } from '../document/types';
+import type { Asset, BlendMode, Layer, LayerFill, LayerGroup, Selection } from '../document/types';
 import {
   createLayer,
   deleteLayer,
+  duplicateLayer,
+  moveLayer,
   renameLayer,
   setLayerBlendMode,
   setLayerFill,
@@ -12,7 +14,17 @@ import {
   setLayerSelection,
   setLayerVisibility,
 } from '../document/layersCrud';
+import {
+  createGroup,
+  deleteGroup,
+  renameGroup,
+  setGroupOpacity,
+  setGroupVisibility,
+  toggleGroupCollapsed,
+  ungroupLayer,
+} from '../document/groupsCrud';
 import { addImageAsset } from '../document/assetsCrud';
+import { computeImageFillGeometry } from '../render/imageFillGeometry';
 
 const BLEND_MODES: { value: BlendMode; label: string }[] = [
   { value: 'normal', label: 'Normal' },
@@ -84,11 +96,14 @@ export function createLayersPanelContent(
   const root = document.createElement('div');
   root.className = 'layers';
 
+  /** Layers checked for the next "Group" action — ephemeral UI state, not part of the document. */
+  const groupCandidates = new Set<string>();
+
   const render = (): void => {
     root.replaceChildren();
     const doc = store.get();
     root.appendChild(renderHeader());
-    root.appendChild(renderList(doc.layers, doc.selections, doc.assets));
+    root.appendChild(renderList(doc.layers, doc.groups, doc.selections, doc.assets));
   };
 
   function renderHeader(): HTMLElement {
@@ -98,6 +113,20 @@ export function createLayersPanelContent(
     const heading = document.createElement('h3');
     heading.className = 'layers__heading';
     heading.textContent = 'Layers';
+
+    const groupButton = document.createElement('button');
+    groupButton.type = 'button';
+    groupButton.className = 'layers__new';
+    groupButton.textContent = 'Group';
+    groupButton.title = 'Group checked layers';
+    groupButton.disabled = groupCandidates.size < 2;
+    groupButton.addEventListener('click', () => {
+      if (groupCandidates.size < 2) return;
+      const ids = [...groupCandidates];
+      groupCandidates.clear();
+      history.record();
+      store.update((doc) => createGroup(doc, `Group ${doc.groups.length + 1}`, ids));
+    });
 
     const newButton = document.createElement('button');
     newButton.type = 'button';
@@ -109,11 +138,11 @@ export function createLayersPanelContent(
       store.update((doc) => createLayer(doc, name));
     });
 
-    headerRow.append(heading, newButton);
+    headerRow.append(heading, groupButton, newButton);
     return headerRow;
   }
 
-  function renderList(layers: Layer[], selections: Selection[], assets: Asset[]): HTMLElement {
+  function renderList(layers: Layer[], groups: LayerGroup[], selections: Selection[], assets: Asset[]): HTMLElement {
     const list = document.createElement('ul');
     list.className = 'layers__list';
 
@@ -125,14 +154,149 @@ export function createLayersPanelContent(
       return list;
     }
 
+    const groupById = new Map(groups.map((group) => [group.id, group]));
+    const renderedGroups = new Set<string>();
+
     // Topmost layer (last in document order — painted last, so on top) is shown first.
     for (const layer of [...layers].reverse()) {
-      list.appendChild(renderItem(layer, selections, assets));
+      const group = layer.groupId ? groupById.get(layer.groupId) : undefined;
+      if (!group) {
+        list.appendChild(renderItem(layer, layers, selections, assets));
+        continue;
+      }
+      if (renderedGroups.has(group.id)) continue;
+      renderedGroups.add(group.id);
+
+      const members = [...layers].reverse().filter((candidate) => candidate.groupId === group.id);
+      list.appendChild(renderGroupBlock(group, members, layers, selections, assets));
     }
     return list;
   }
 
-  function renderItem(layer: Layer, selections: Selection[], assets: Asset[]): HTMLElement {
+  function renderGroupBlock(
+    group: LayerGroup,
+    members: Layer[],
+    allLayers: Layer[],
+    selections: Selection[],
+    assets: Asset[],
+  ): HTMLElement {
+    const item = document.createElement('li');
+    item.className = 'layers__group';
+
+    const header = document.createElement('div');
+    header.className = 'layers__group-header';
+
+    const collapseButton = document.createElement('button');
+    collapseButton.type = 'button';
+    collapseButton.className = 'layers__item-action';
+    collapseButton.title = group.collapsed ? 'Expand group' : 'Collapse group';
+    collapseButton.setAttribute('aria-label', collapseButton.title);
+    collapseButton.textContent = group.collapsed ? '\u{25B8}' : '\u{25BE}';
+    collapseButton.addEventListener('click', () => {
+      history.record();
+      store.update((doc) => toggleGroupCollapsed(doc, group.id));
+    });
+
+    const visibilityButton = document.createElement('button');
+    visibilityButton.type = 'button';
+    visibilityButton.className = 'layers__item-action';
+    visibilityButton.title = group.visible ? 'Hide group' : 'Show group';
+    visibilityButton.setAttribute('aria-label', visibilityButton.title);
+    visibilityButton.setAttribute('aria-pressed', String(group.visible));
+    visibilityButton.textContent = group.visible ? '\u{1F441}' : '\u{2014}';
+    visibilityButton.addEventListener('click', () => {
+      history.record();
+      store.update((doc) => setGroupVisibility(doc, group.id, !group.visible));
+    });
+
+    const nameButton = document.createElement('button');
+    nameButton.type = 'button';
+    nameButton.className = 'layers__item-name';
+    nameButton.textContent = `${group.name} (${members.length})`;
+    nameButton.title = 'Click to rename';
+    nameButton.addEventListener('click', () => startGroupRename(item, group));
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'layers__item-action';
+    deleteButton.title = 'Ungroup';
+    deleteButton.setAttribute('aria-label', 'Ungroup');
+    deleteButton.textContent = '\u{2715}';
+    deleteButton.addEventListener('click', () => {
+      history.record();
+      store.update((doc) => deleteGroup(doc, group.id));
+    });
+
+    header.append(collapseButton, visibilityButton, nameButton, deleteButton);
+    item.appendChild(header);
+
+    const opacityRow = document.createElement('div');
+    opacityRow.className = 'layers__setting-row layers__group-opacity';
+    const opacityLabel = document.createElement('label');
+    opacityLabel.className = 'layers__setting-label';
+    opacityLabel.textContent = 'Opacity';
+    const opacityRange = document.createElement('input');
+    opacityRange.type = 'range';
+    opacityRange.className = 'layers__setting-range';
+    opacityRange.min = '0';
+    opacityRange.max = '100';
+    opacityRange.value = String(Math.round(group.opacity * 100));
+    const opacityValue = document.createElement('span');
+    opacityValue.className = 'layers__setting-value';
+    opacityValue.textContent = `${opacityRange.value}%`;
+    opacityRange.addEventListener('input', () => {
+      opacityValue.textContent = `${opacityRange.value}%`;
+    });
+    bindCommittedInput(opacityRange, history, () => {
+      store.update((doc) => setGroupOpacity(doc, group.id, Number(opacityRange.value) / 100));
+    });
+    opacityRow.append(opacityLabel, opacityRange, opacityValue);
+    item.appendChild(opacityRow);
+
+    if (!group.collapsed) {
+      const memberList = document.createElement('ul');
+      memberList.className = 'layers__group-members';
+      for (const member of members) {
+        memberList.appendChild(renderItem(member, allLayers, selections, assets));
+      }
+      item.appendChild(memberList);
+    }
+
+    return item;
+  }
+
+  function startGroupRename(item: HTMLElement, group: LayerGroup): void {
+    const nameButton = item.querySelector<HTMLButtonElement>('.layers__item-name');
+    if (!nameButton) return;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'layers__item-rename';
+    input.value = group.name;
+
+    const commit = (): void => {
+      const name = input.value.trim();
+      if (name && name !== group.name) {
+        history.record();
+        store.update((doc) => renameGroup(doc, group.id, name));
+      } else {
+        render();
+      }
+    };
+
+    input.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.key === 'Enter') input.blur();
+      if (event.key === 'Escape') render();
+    });
+    input.addEventListener('blur', commit, { once: true });
+
+    nameButton.replaceWith(input);
+    input.focus();
+    input.select();
+  }
+
+  function renderItem(layer: Layer, allLayers: Layer[], selections: Selection[], assets: Asset[]): HTMLElement {
     const item = document.createElement('li');
     item.className = 'layers__item';
     item.classList.toggle('layers__item--active', layer.id === selectedLayer.get());
@@ -141,6 +305,19 @@ export function createLayersPanelContent(
     row.className = 'layers__item-row';
     row.addEventListener('click', () => {
       selectedLayer.set(selectedLayer.get() === layer.id ? null : layer.id);
+    });
+
+    const groupCheckbox = document.createElement('input');
+    groupCheckbox.type = 'checkbox';
+    groupCheckbox.className = 'layers__item-checkbox';
+    groupCheckbox.title = 'Select for grouping';
+    groupCheckbox.setAttribute('aria-label', 'Select for grouping');
+    groupCheckbox.checked = groupCandidates.has(layer.id);
+    groupCheckbox.addEventListener('click', (event) => event.stopPropagation());
+    groupCheckbox.addEventListener('change', () => {
+      if (groupCheckbox.checked) groupCandidates.add(layer.id);
+      else groupCandidates.delete(layer.id);
+      render();
     });
 
     const visibilityButton = document.createElement('button');
@@ -163,6 +340,44 @@ export function createLayersPanelContent(
     nameButton.title = 'Click to rename';
     nameButton.addEventListener('click', () => startRename(item, layer));
 
+    const moveUpButton = document.createElement('button');
+    moveUpButton.type = 'button';
+    moveUpButton.className = 'layers__item-action';
+    moveUpButton.title = 'Move up';
+    moveUpButton.setAttribute('aria-label', 'Move layer up');
+    moveUpButton.textContent = '\u{2191}';
+    moveUpButton.disabled = allLayers[allLayers.length - 1]?.id === layer.id;
+    moveUpButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      history.record();
+      store.update((doc) => moveLayer(doc, layer.id, 'up'));
+    });
+
+    const moveDownButton = document.createElement('button');
+    moveDownButton.type = 'button';
+    moveDownButton.className = 'layers__item-action';
+    moveDownButton.title = 'Move down';
+    moveDownButton.setAttribute('aria-label', 'Move layer down');
+    moveDownButton.textContent = '\u{2193}';
+    moveDownButton.disabled = allLayers[0]?.id === layer.id;
+    moveDownButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      history.record();
+      store.update((doc) => moveLayer(doc, layer.id, 'down'));
+    });
+
+    const duplicateButton = document.createElement('button');
+    duplicateButton.type = 'button';
+    duplicateButton.className = 'layers__item-action';
+    duplicateButton.title = 'Duplicate';
+    duplicateButton.setAttribute('aria-label', 'Duplicate layer');
+    duplicateButton.textContent = '\u{29C9}';
+    duplicateButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      history.record();
+      store.update((doc) => duplicateLayer(doc, layer.id));
+    });
+
     const deleteButton = document.createElement('button');
     deleteButton.type = 'button';
     deleteButton.className = 'layers__item-action';
@@ -176,7 +391,24 @@ export function createLayersPanelContent(
       if (selectedLayer.get() === layer.id) selectedLayer.set(null);
     });
 
-    row.append(visibilityButton, nameButton, deleteButton);
+    row.append(groupCheckbox, visibilityButton, nameButton, moveUpButton, moveDownButton, duplicateButton);
+
+    if (layer.groupId) {
+      const ungroupButton = document.createElement('button');
+      ungroupButton.type = 'button';
+      ungroupButton.className = 'layers__item-action';
+      ungroupButton.title = 'Remove from group';
+      ungroupButton.setAttribute('aria-label', 'Remove from group');
+      ungroupButton.textContent = '\u{2923}';
+      ungroupButton.addEventListener('click', (event) => {
+        event.stopPropagation();
+        history.record();
+        store.update((doc) => ungroupLayer(doc, layer.id));
+      });
+      row.appendChild(ungroupButton);
+    }
+
+    row.appendChild(deleteButton);
     item.appendChild(row);
     item.appendChild(renderSettings(layer, selections, assets));
     return item;
@@ -508,6 +740,61 @@ export function createLayersPanelContent(
     const rotationInput = numberInput(fill.rotation, -360, 360, 1);
     rotationRow.append(rotationInput);
     wrapper.appendChild(rotationRow);
+
+    const alignRow = document.createElement('div');
+    alignRow.className = 'layers__setting-row';
+    alignRow.append(labelSpan('Align'));
+    const alignButtons = document.createElement('div');
+    alignButtons.className = 'layers__align-buttons';
+
+    const applyAlign = (partial: { x?: number; y?: number }): void => {
+      history.record();
+      store.update((doc) =>
+        setLayerFill(doc, layer.id, {
+          type: 'image',
+          assetId: asset.id,
+          position: { x: partial.x ?? fill.position.x, y: partial.y ?? fill.position.y },
+          scale: fill.scale,
+          rotation: fill.rotation,
+          crop: fill.crop,
+        }),
+      );
+    };
+
+    const alignEdgeX = (edge: 'start' | 'end'): number => {
+      const doc = store.get();
+      const geometry = computeImageFillGeometry(fill, asset, doc.grid);
+      const half = geometry.displayWidth / 2;
+      return edge === 'start' ? half / doc.grid.columns : (doc.grid.columns - half) / doc.grid.columns;
+    };
+
+    const alignEdgeY = (edge: 'start' | 'end'): number => {
+      const doc = store.get();
+      const geometry = computeImageFillGeometry(fill, asset, doc.grid);
+      const half = geometry.displayHeight / 2;
+      return edge === 'start' ? half / doc.grid.rows : (doc.grid.rows - half) / doc.grid.rows;
+    };
+
+    const alignSpecs: { label: string; title: string; onClick: () => void }[] = [
+      { label: '\u{21E4}', title: 'Align left', onClick: () => applyAlign({ x: alignEdgeX('start') }) },
+      { label: '\u{2194}', title: 'Center horizontally', onClick: () => applyAlign({ x: 0.5 }) },
+      { label: '\u{21E5}', title: 'Align right', onClick: () => applyAlign({ x: alignEdgeX('end') }) },
+      { label: '\u{21E1}', title: 'Align top', onClick: () => applyAlign({ y: alignEdgeY('start') }) },
+      { label: '\u{2195}', title: 'Center vertically', onClick: () => applyAlign({ y: 0.5 }) },
+      { label: '\u{21E3}', title: 'Align bottom', onClick: () => applyAlign({ y: alignEdgeY('end') }) },
+    ];
+    for (const spec of alignSpecs) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'layers__align-button';
+      button.textContent = spec.label;
+      button.title = spec.title;
+      button.setAttribute('aria-label', spec.title);
+      button.addEventListener('click', spec.onClick);
+      alignButtons.appendChild(button);
+    }
+    alignRow.appendChild(alignButtons);
+    wrapper.appendChild(alignRow);
 
     const cropPosRow = document.createElement('div');
     cropPosRow.className = 'layers__setting-row';

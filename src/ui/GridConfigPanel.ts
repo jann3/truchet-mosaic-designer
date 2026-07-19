@@ -1,6 +1,8 @@
 import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
 import { GRID_PATTERNS, generatePatternedGrid, type GridPattern } from '../document/patternGenerators';
+import { mirrorHorizontal, mirrorVertical, rotate180 } from '../document/symmetryOperations';
+import type { Grid } from '../document/types';
 
 const MIN_DIMENSION = 1;
 const MAX_DIMENSION = 64;
@@ -152,5 +154,48 @@ export function createGridConfigPanel(store: DocumentStore, history: HistoryMana
     }));
   });
 
+  form.appendChild(createSymmetrySection(store, history));
+
   return form;
+}
+
+/**
+ * One-shot symmetry operations (Phase 9) — transform the current grid's tile
+ * orientations in place, the same way the pattern generator above replaces
+ * `document.grid` wholesale, so they undo/redo as a single step alongside it.
+ */
+function createSymmetrySection(store: DocumentStore, history: HistoryManager): HTMLElement {
+  const fieldset = document.createElement('fieldset');
+  fieldset.className = 'grid-config__fieldset';
+
+  const legend = document.createElement('legend');
+  legend.className = 'grid-config__legend';
+  legend.textContent = 'Symmetry';
+  fieldset.appendChild(legend);
+
+  const buttonRow = document.createElement('div');
+  buttonRow.className = 'grid-config__symmetry-row';
+
+  const operations: { label: string; title: string; apply: (grid: Grid) => Grid }[] = [
+    { label: '\u{21D4}', title: 'Mirror horizontal', apply: mirrorHorizontal },
+    { label: '\u{21D5}', title: 'Mirror vertical', apply: mirrorVertical },
+    { label: '\u{21BB}', title: 'Rotate 180°', apply: rotate180 },
+  ];
+
+  for (const operation of operations) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'grid-config__symmetry-button';
+    button.textContent = operation.label;
+    button.title = operation.title;
+    button.setAttribute('aria-label', operation.title);
+    button.addEventListener('click', () => {
+      history.record();
+      store.update((doc) => ({ ...doc, grid: operation.apply(doc.grid) }));
+    });
+    buttonRow.appendChild(button);
+  }
+
+  fieldset.appendChild(buttonRow);
+  return fieldset;
 }

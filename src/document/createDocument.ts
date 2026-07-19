@@ -42,6 +42,7 @@ export function createDocument(options: CreateDocumentOptions = {}): TruchetDocu
     aspectRatio: options.aspectRatio ?? 1,
     grid: createGrid(options.columns, options.rows),
     layers: [],
+    groups: [],
     selections: [],
     assets: [],
     exportSettings: createDefaultExportSettings(),

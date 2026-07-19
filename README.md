@@ -176,3 +176,42 @@ grids reaching the canvas edge. The move handle is the display rect itself; it n
 `pointer-events: all` rather than `auto`; since the rect has `fill: none`, `auto` (≈
 `visiblePainted`) only hit-tests the stroke outline, not the interior, which was letting drags fall
 through to the grid underneath.
+
+### Phase 9 — Advanced Composition Tools ✅
+
+Blend modes were already complete as of Phase 7 (`BlendMode` in `document/types.ts`: Normal,
+Multiply, Screen, Overlay, Difference, Darken, Lighten — driven straight through to CSS
+`mix-blend-mode`), so this phase's new work was layer ordering, transform alignment, and grid
+symmetry tools.
+
+**Layer ordering.** `layersCrud.ts` gained `moveLayer` (swaps a layer with its array neighbour —
+"up"/"down" in the panel's topmost-first display maps to higher/lower array index, since later
+array entries paint on top) and `duplicateLayer` (clones with a new id, inserted directly above the
+original). The Layers panel exposes both as ↑/↓/⧉ buttons per row, disabled at the top/bottom of
+the stack, each wrapped in `history.record()` like every other document mutation.
+
+**Grouping** (`document/groupsCrud.ts`, `LayerGroup` in `types.ts`) is deliberately a tag, not a
+tree: a `Layer.groupId` references a `LayerGroup` holding its own name/visible/opacity/collapsed —
+grouping never reorders `document.layers`, so it can't disturb paint order. The Layers panel adds a
+checkbox per layer (ephemeral `groupCandidates` UI state, not part of the document) and a header
+"Group" button that tags every checked layer with a new group; `renderList` then clusters a group's
+members into one collapsible block wherever its topmost member falls in the topmost-first list,
+even if the members aren't contiguous in `document.layers`. `TruchetRenderer` folds group state into
+each member's effective visibility/opacity at render time (`layer.visible && group.visible`,
+`layer.opacity * group.opacity`) rather than wrapping members in their own SVG group, keeping the
+existing per-layer compositing pass unchanged.
+
+**Transform / align.** Image layers already had move/scale/rotate from Phase 8; this phase adds six
+align buttons (left/center/right, top/center/bottom) to the image fill controls, computed from
+`computeImageFillGeometry` — the same geometry helper the renderer and drag handles use — so "align
+left" reads the image's current display width and solves for the `position.x` that puts its edge at
+the grid boundary, rather than guessing at a fixed offset.
+
+**Symmetry tools** (`document/symmetryOperations.ts`) are one-shot grid operations in the same style
+as Phase 4's pattern generators: `mirrorHorizontal`, `mirrorVertical`, and `rotate180` rebuild
+`document.grid.tiles`, keeping each tile's id pinned to its own (row, column) but pulling its
+orientation from the mirrored/rotated source position. Mirroring swaps `diagonal-a`/`diagonal-b`
+(a TL→BR diagonal reflects into a TR→BL one) while 180° rotation leaves orientation untouched (a
+diagonal maps onto itself under a half-turn) — both are pure functions of the grid, wired into the
+Inspector's Grid panel next to Generate and going through the same `history.record()` +
+`store.update()` as every other grid-replacing action, so they undo as a single step.
