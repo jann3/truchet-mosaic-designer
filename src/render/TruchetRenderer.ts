@@ -1,7 +1,8 @@
-import type { Grid } from '../document/types';
+import type { Asset, Grid, Layer, Tile, TruchetDocument } from '../document/types';
 import type { DocumentStore } from '../document/DocumentStore';
 import type { SelectionEngine, SelectionState } from '../edit/SelectionEngine';
-import { getTileTriangles, getTriangleId, type TriangleHalf } from './tileGeometry';
+import { getTileTriangles, getTriangleId, parseTriangleId, type Point, type TriangleHalf } from './tileGeometry';
+import { gradientLine } from './gradient';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -10,6 +11,10 @@ const EMPTY_SELECTION_STATE: SelectionState = { hoveredTriangleId: null, selecte
 const HOVER_CLASS = 'truchet-grid__triangle--hover';
 const SELECTED_CLASS = 'truchet-grid__triangle--selected';
 
+function pointsToString(points: readonly Point[]): string {
+  return points.map(([x, y]) => `${x},${y}`).join(' ');
+}
+
 /**
  * Renders a document's grid as an SVG of Truchet tile triangles. The SVG's
  * viewBox tracks the grid's column/row count and scales via CSS (width/height
@@ -17,9 +22,18 @@ const SELECTED_CLASS = 'truchet-grid__triangle--selected';
  * resolution without any pixel math here. Also mirrors hover/selection state
  * from a `SelectionEngine` onto the affected triangles without re-rendering
  * the whole grid.
+ *
+ * Layers (Phase 7) paint over this base grid: each visible layer fills the
+ * triangles named by its selection reference according to its fill type,
+ * inside a `<g>` carrying the layer's opacity and CSS `mix-blend-mode` — the
+ * base grid is always the foundation layers composite on top of, never
+ * something they replace, per the "grid never owns the artwork" principle.
  */
 export class TruchetRenderer {
   readonly svg: SVGSVGElement;
+  private readonly defs: SVGDefsElement;
+  private readonly baseGroup: SVGGElement;
+  private readonly layersGroup: SVGGElement;
   private readonly unsubscribeDoc: () => void;
   private readonly unsubscribeSelection: () => void;
   private readonly triangleElements = new Map<string, SVGPolygonElement>();
@@ -28,10 +42,18 @@ export class TruchetRenderer {
   constructor(container: HTMLElement, store: DocumentStore, selectionEngine: SelectionEngine) {
     this.svg = document.createElementNS(SVG_NS, 'svg');
     this.svg.classList.add('truchet-grid');
+
+    this.defs = document.createElementNS(SVG_NS, 'defs');
+    this.baseGroup = document.createElementNS(SVG_NS, 'g');
+    this.baseGroup.classList.add('truchet-grid__base');
+    this.layersGroup = document.createElementNS(SVG_NS, 'g');
+    this.layersGroup.classList.add('truchet-grid__layers');
+    this.svg.append(this.defs, this.baseGroup, this.layersGroup);
+
     container.appendChild(this.svg);
 
-    this.render(store.get().grid, selectionEngine.getState());
-    this.unsubscribeDoc = store.subscribe((doc) => this.render(doc.grid, selectionEngine.getState()));
+    this.render(store.get(), selectionEngine.getState());
+    this.unsubscribeDoc = store.subscribe((doc) => this.render(doc, selectionEngine.getState()));
     this.unsubscribeSelection = selectionEngine.subscribe((state) => this.applyHighlightDiff(state));
   }
 
@@ -41,9 +63,20 @@ export class TruchetRenderer {
     this.svg.remove();
   }
 
-  private render(grid: Grid, selectionState: SelectionState): void {
-    this.svg.setAttribute('viewBox', `0 0 ${grid.columns} ${grid.rows}`);
-    this.svg.replaceChildren();
+  private render(doc: TruchetDocument, selectionState: SelectionState): void {
+    this.svg.setAttribute('viewBox', `0 0 ${doc.grid.columns} ${doc.grid.rows}`);
+    this.renderBase(doc.grid);
+    this.renderLayers(doc);
+
+    // Freshly created base elements carry no highlight classes yet, so
+    // re-apply the current selection state against the new map rather than
+    // diffing.
+    this.appliedSelectionState = EMPTY_SELECTION_STATE;
+    this.applyHighlightDiff(selectionState);
+  }
+
+  private renderBase(grid: Grid): void {
+    this.baseGroup.replaceChildren();
     this.triangleElements.clear();
 
     const fragment = document.createDocumentFragment();
@@ -52,27 +85,148 @@ export class TruchetRenderer {
       fragment.appendChild(this.createTriangle(tile.id, 'a', a.points, 'truchet-grid__triangle--a'));
       fragment.appendChild(this.createTriangle(tile.id, 'b', b.points, 'truchet-grid__triangle--b'));
     }
-    this.svg.appendChild(fragment);
-
-    // Freshly created elements carry no highlight classes yet, so re-apply
-    // the current selection state against the new map rather than diffing.
-    this.appliedSelectionState = EMPTY_SELECTION_STATE;
-    this.applyHighlightDiff(selectionState);
+    this.baseGroup.appendChild(fragment);
   }
 
   private createTriangle(
     tileId: string,
     half: TriangleHalf,
-    points: readonly (readonly [number, number])[],
+    points: readonly Point[],
     className: string,
   ): SVGPolygonElement {
     const polygon = document.createElementNS(SVG_NS, 'polygon');
-    polygon.setAttribute('points', points.map(([x, y]) => `${x},${y}`).join(' '));
+    polygon.setAttribute('points', pointsToString(points));
     polygon.classList.add(className);
     polygon.dataset.tileId = tileId;
     polygon.dataset.half = half;
     this.triangleElements.set(getTriangleId(tileId, half), polygon);
     return polygon;
+  }
+
+  private renderLayers(doc: TruchetDocument): void {
+    this.layersGroup.replaceChildren();
+    this.defs.replaceChildren();
+
+    const tileById = new Map(doc.grid.tiles.map((tile) => [tile.id, tile]));
+
+    for (const layer of doc.layers) {
+      if (!layer.visible || layer.opacity <= 0) continue;
+      const selection = layer.selectionId ? doc.selections.find((s) => s.id === layer.selectionId) : null;
+      if (!selection || selection.triangleIds.length === 0) continue;
+
+      const trianglePoints = selection.triangleIds
+        .map((triangleId) => this.pointsForTriangle(tileById, triangleId))
+        .filter((points): points is readonly Point[] => points !== null);
+      if (trianglePoints.length === 0) continue;
+
+      const g = document.createElementNS(SVG_NS, 'g');
+      g.style.opacity = String(layer.opacity);
+      g.style.mixBlendMode = layer.blendMode;
+
+      if (layer.fill.type === 'solid') {
+        this.appendSolidTriangles(g, trianglePoints, layer.fill.color);
+      } else if (layer.fill.type === 'gradient') {
+        this.appendGradientTriangles(g, trianglePoints, layer, doc.grid);
+      } else {
+        this.appendImageFill(g, trianglePoints, layer, doc.grid, doc.assets);
+      }
+
+      this.layersGroup.appendChild(g);
+    }
+  }
+
+  private pointsForTriangle(tileById: Map<string, Tile>, triangleId: string): readonly Point[] | null {
+    const { tileId, half } = parseTriangleId(triangleId);
+    const tile = tileById.get(tileId);
+    if (!tile) return null;
+    const { a, b } = getTileTriangles(tile);
+    return half === 'a' ? a.points : b.points;
+  }
+
+  private appendSolidTriangles(g: SVGGElement, trianglePoints: readonly (readonly Point[])[], color: string): void {
+    for (const points of trianglePoints) {
+      const polygon = document.createElementNS(SVG_NS, 'polygon');
+      polygon.setAttribute('points', pointsToString(points));
+      polygon.setAttribute('fill', color);
+      g.appendChild(polygon);
+    }
+  }
+
+  private appendGradientTriangles(
+    g: SVGGElement,
+    trianglePoints: readonly (readonly Point[])[],
+    layer: Layer,
+    grid: Grid,
+  ): void {
+    if (layer.fill.type !== 'gradient') return;
+    const fill = layer.fill;
+    const gradientId = `layer-gradient-${layer.id}`;
+    const { x1, y1, x2, y2 } = gradientLine(fill.angle, grid.columns, grid.rows);
+
+    const gradientEl = document.createElementNS(SVG_NS, 'linearGradient');
+    gradientEl.setAttribute('id', gradientId);
+    gradientEl.setAttribute('gradientUnits', 'userSpaceOnUse');
+    gradientEl.setAttribute('x1', String(x1));
+    gradientEl.setAttribute('y1', String(y1));
+    gradientEl.setAttribute('x2', String(x2));
+    gradientEl.setAttribute('y2', String(y2));
+    for (const stop of fill.stops) {
+      const stopEl = document.createElementNS(SVG_NS, 'stop');
+      stopEl.setAttribute('offset', String(stop.offset));
+      stopEl.setAttribute('stop-color', stop.color);
+      gradientEl.appendChild(stopEl);
+    }
+    this.defs.appendChild(gradientEl);
+
+    for (const points of trianglePoints) {
+      const polygon = document.createElementNS(SVG_NS, 'polygon');
+      polygon.setAttribute('points', pointsToString(points));
+      polygon.setAttribute('fill', `url(#${gradientId})`);
+      g.appendChild(polygon);
+    }
+  }
+
+  private appendImageFill(
+    g: SVGGElement,
+    trianglePoints: readonly (readonly Point[])[],
+    layer: Layer,
+    grid: Grid,
+    assets: Asset[],
+  ): void {
+    if (layer.fill.type !== 'image') return;
+    const fill = layer.fill;
+    const asset = assets.find((a) => a.id === fill.assetId);
+    if (!asset) return;
+
+    const clipId = `layer-clip-${layer.id}`;
+    const clipPath = document.createElementNS(SVG_NS, 'clipPath');
+    clipPath.setAttribute('id', clipId);
+    for (const points of trianglePoints) {
+      const polygon = document.createElementNS(SVG_NS, 'polygon');
+      polygon.setAttribute('points', pointsToString(points));
+      clipPath.appendChild(polygon);
+    }
+    this.defs.appendChild(clipPath);
+
+    // Position/scale/rotation are static numeric inputs for now — interactive
+    // drag/resize/rotate handles are Phase 8 (Image Mask System).
+    const width = grid.columns * fill.scale;
+    const height = width * (asset.height / asset.width);
+    const cx = fill.position.x * grid.columns;
+    const cy = fill.position.y * grid.rows;
+
+    const image = document.createElementNS(SVG_NS, 'image');
+    image.setAttribute('href', asset.src);
+    image.setAttribute('x', String(cx - width / 2));
+    image.setAttribute('y', String(cy - height / 2));
+    image.setAttribute('width', String(width));
+    image.setAttribute('height', String(height));
+    image.setAttribute('preserveAspectRatio', 'none');
+    image.setAttribute('clip-path', `url(#${clipId})`);
+    if (fill.rotation) {
+      image.setAttribute('transform', `rotate(${fill.rotation} ${cx} ${cy})`);
+    }
+    g.appendChild(image);
   }
 
   private applyHighlightDiff(state: SelectionState): void {

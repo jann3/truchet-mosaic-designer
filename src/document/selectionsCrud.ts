@@ -21,7 +21,12 @@ export function duplicateSelection(document: TruchetDocument, id: string): Truch
 }
 
 export function deleteSelection(document: TruchetDocument, id: string): TruchetDocument {
-  return { ...document, selections: document.selections.filter((selection) => selection.id !== id) };
+  return {
+    ...document,
+    selections: document.selections.filter((selection) => selection.id !== id),
+    // Layers referencing the deleted selection fall back to "no tiles yet" rather than dangling.
+    layers: document.layers.map((layer) => (layer.selectionId === id ? { ...layer, selectionId: null } : layer)),
+  };
 }
 
 export function setSelectionTriangles(document: TruchetDocument, id: string, triangleIds: string[]): TruchetDocument {

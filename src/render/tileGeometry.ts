@@ -6,7 +6,16 @@ export function getTriangleId(tileId: string, half: TriangleHalf): string {
   return `${tileId}:${half}`;
 }
 
-type Point = readonly [number, number];
+/** Inverse of `getTriangleId` — splits `${tileId}:a`/`${tileId}:b` back into its parts. */
+export function parseTriangleId(triangleId: string): { tileId: string; half: TriangleHalf } {
+  const separatorIndex = triangleId.lastIndexOf(':');
+  return {
+    tileId: triangleId.slice(0, separatorIndex),
+    half: triangleId.slice(separatorIndex + 1) as TriangleHalf,
+  };
+}
+
+export type Point = readonly [number, number];
 
 export interface Triangle {
   points: readonly [Point, Point, Point];

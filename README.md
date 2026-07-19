@@ -117,3 +117,31 @@ to select mode so it's immediately editable. A small binder in `CanvasArea.ts` k
 mode, so the existing Phase 5 highlight-diffing in `TruchetRenderer` renders it with no renderer
 changes needed. All of it goes through the same `HistoryManager` as tile edits, so selection edits
 undo/redo alongside grid edits.
+
+### Phase 7 — Layer System ✅
+
+Layers are now the main design mechanism, composited on top of the base black/white grid rather
+than replacing it — the grid stays a geometric mask, per `CLAUDE.md`'s core architectural
+principle. Each `Layer` (`document/layersCrud.ts`) holds a name, visibility, opacity, blend mode, a
+reference to one of Phase 6's named `Selection`s, and a fill: solid colour, linear gradient, or
+image. The Layers panel (`src/ui/LayersPanel.ts`, replacing its Phase 1 placeholder) lists layers
+topmost-first with inline controls for all of it, including an image file picker that reads the
+upload as a data URL and stores it as an `Asset` (`document/assetsCrud.ts`) — there's no
+backend, so assets live in the document itself. Continuous controls (opacity, colour pickers,
+gradient angle, image transform) commit to the document (and undo history) on `change`, not
+`input`, since the panel fully re-renders on every document change and rebuilding a control
+mid-drag would drop its focus.
+
+`TruchetRenderer` gained a layer-compositing pass (`src/render/`): each visible layer gets an SVG
+`<g>` carrying its opacity and CSS `mix-blend-mode`, filled per its fill type — solid polygons,
+a single grid-spanning `<linearGradient>` (`render/gradient.ts` ports CSS's angle-to-line geometry
+so the gradient reads as one continuous sweep across the layer's triangles, not one per triangle),
+or an `<image>` clipped to the selection's triangle shapes. This paints strictly on top of the
+Phase 3 base triangles, in a `pointer-events: none` group, so Phase 5/6 grid editing and selection
+gestures keep landing on the base grid underneath exactly as before — a layer's artwork never
+intercepts a click meant for the tile beneath it. Image position/scale/rotation are plain numeric
+fields for now; drag/resize/rotate handles on the canvas are Phase 8.
+
+Deleting a `Selection` that a layer references clears that layer's reference back to `null`
+(`selectionsCrud.ts`) rather than leaving it dangling, so a referencing layer just stops rendering
+instead of erroring.

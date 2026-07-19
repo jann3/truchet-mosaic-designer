@@ -28,7 +28,7 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
     min: PANEL_MIN_WIDTH,
     max: PANEL_MAX_WIDTH,
     initial: PANEL_INITIAL_WIDTH,
-    content: createLayersPanelContent(),
+    content: createLayersPanelContent(store, history),
   });
 
   const inspectorPanel = new ResizablePanel({

@@ -57,3 +57,11 @@
   stroke: var(--color-accent);
   stroke-width: 0.05;
 }
+
+/*
+ * Layers paint on top of the base grid but must never intercept pointer
+ * events — edit/select gestures always target the base triangles beneath.
+ */
+.truchet-grid__layers {
+  pointer-events: none;
+}

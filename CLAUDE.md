@@ -10,72 +10,9 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–6 (application shell, document model, grid rendering, grid configuration controls, grid
-editing UX, selection system) are complete — see `README.md`'s "Implementation progress" section
-for what shipped and where.
-
----
-
-# Phase 7 — Layer System
-
-## Goal
-
-Introduce non-destructive composition.
-
-Layers become the main design mechanism.
-
-## Layer structure
-
-Each layer contains:
-
-```
-Layer
-
-Name
-
-Visibility
-
-Opacity
-
-Blend Mode
-
-Selection Reference
-
-Fill
-```
-
-Example:
-
-```
-Obama Portrait
-
-Selection:
-Black Triangles
-
-Fill:
-Image
-
-Blend:
-Normal
-
-Opacity:
-100%
-```
-
-## Layer types
-
-Initial:
-
-* Solid colour
-* Gradient
-* Image
-
-Future:
-
-* Pattern
-* Noise
-* Procedural
-* Adjustment layers
+Phases 1–7 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX, selection system, layer system) are complete — see `README.md`'s "Implementation
+progress" section for what shipped and where.
 
 ---
 
