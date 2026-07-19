@@ -11,11 +11,6 @@
   overflow: auto;
 }
 
-/*
- * Placeholder only: fills the available area without imposing pixel
- * dimensions. Phase 3 (rendering engine) replaces this with the SVG grid,
- * scaled and aspect-locked to the document's configured aspect ratio.
- */
 .canvas-area__viewport {
   position: relative;
   width: 100%;
@@ -24,8 +19,27 @@
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--border-radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-muted);
+}
+
+/*
+ * viewBox tracks the grid's column/row count; preserveAspectRatio (default
+ * xMidYMid meet) letterboxes it within the viewport so tiles stay square and
+ * it rescales automatically with the container — no JS resize handling needed.
+ */
+.truchet-grid {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.truchet-grid__triangle--a {
+  fill: var(--color-text);
+  stroke: var(--color-text);
+  stroke-width: 0.02;
+}
+
+.truchet-grid__triangle--b {
+  fill: var(--color-surface);
+  stroke: var(--color-surface);
+  stroke-width: 0.02;
 }

@@ -1,3 +1,4 @@
+import type { DocumentStore } from '../document/DocumentStore';
 import { createToolbar } from './Toolbar';
 import { ResizablePanel } from './ResizablePanel';
 import { createLayersPanelContent } from './LayersPanel';
@@ -8,7 +9,7 @@ const PANEL_MIN_WIDTH = 160;
 const PANEL_MAX_WIDTH = 448;
 const PANEL_INITIAL_WIDTH = 280;
 
-export function createAppShell(): HTMLElement {
+export function createAppShell(store: DocumentStore): HTMLElement {
   const shell = document.createElement('div');
   shell.className = 'app-shell';
 
@@ -36,7 +37,7 @@ export function createAppShell(): HTMLElement {
     content: createInspectorPanelContent(),
   });
 
-  const canvasArea = createCanvasArea();
+  const canvasArea = createCanvasArea(store);
   const toolbar = createToolbar();
 
   toolbar.layersButton.addEventListener('click', () => {
