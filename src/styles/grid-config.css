@@ -1,0 +1,110 @@
+.inspector-panel {
+  color: var(--color-text);
+}
+
+.grid-config {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.grid-config__heading {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.grid-config__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.grid-config__label {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.grid-config__number {
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+}
+
+.grid-config__fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.grid-config__legend {
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+}
+
+.grid-config__radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.grid-config__seed-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding-left: 1.5rem;
+}
+
+.grid-config__seed-field[hidden] {
+  display: none;
+}
+
+.grid-config__seed-field .grid-config__label {
+  flex: none;
+}
+
+.grid-config__seed-field .grid-config__number {
+  width: 0;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.grid-config__seed-randomize {
+  flex: none;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: 0.8125rem;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.grid-config__seed-randomize:hover {
+  border-color: var(--color-accent);
+}
+
+.grid-config__generate {
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-accent-contrast);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.grid-config__generate:hover {
+  filter: brightness(1.08);
+}

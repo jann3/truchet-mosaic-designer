@@ -34,7 +34,7 @@ export function createAppShell(store: DocumentStore): HTMLElement {
     min: PANEL_MIN_WIDTH,
     max: PANEL_MAX_WIDTH,
     initial: PANEL_INITIAL_WIDTH,
-    content: createInspectorPanelContent(),
+    content: createInspectorPanelContent(store),
   });
 
   const canvasArea = createCanvasArea(store);

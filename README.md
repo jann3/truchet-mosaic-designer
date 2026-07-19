@@ -64,3 +64,14 @@ container, stays vector-sharp at any resolution, and letterboxes via `preserveAs
 tiles square regardless of the canvas area's shape. No editing yet; that's Phase 5. Canvas rasterization
 for final export is deferred to Phase 11, per `CLAUDE.md`'s "SVG for vector rendering, Canvas only
 for final raster export."
+
+### Phase 4 — Grid Configuration Controls ✅
+
+The Inspector panel now hosts a live grid setup form (`src/ui/GridConfigPanel.ts`): columns, rows,
+and a choice of four pattern generators (`src/document/patternGenerators.ts`) — Uniform, Alternate
+Rows, Alternate Counter-Clockwise, and Random, the last with a seed field and a randomize button so
+results are reproducible on demand. Random uses a small seeded PRNG (mulberry32) rather than
+`Math.random()` directly, so the same seed always regenerates the same layout. Hitting Generate
+replaces only `document.grid` via `DocumentStore.update`, leaving the rest of the document
+untouched; the renderer picks up the change immediately through its existing subscription from
+Phase 3, with no changes needed there.

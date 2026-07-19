@@ -1,5 +1,9 @@
-export function createInspectorPanelContent(): HTMLElement {
-  const placeholder = document.createElement('p');
-  placeholder.textContent = 'Selection and layer properties will appear here (Phase 4 onward).';
-  return placeholder;
+import type { DocumentStore } from '../document/DocumentStore';
+import { createGridConfigPanel } from './GridConfigPanel';
+
+export function createInspectorPanelContent(store: DocumentStore): HTMLElement {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'inspector-panel';
+  wrapper.appendChild(createGridConfigPanel(store));
+  return wrapper;
 }
