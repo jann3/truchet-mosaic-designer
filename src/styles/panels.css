@@ -1,0 +1,79 @@
+.panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.panel--layers {
+  grid-area: layers;
+  border-right: 1px solid var(--color-border);
+}
+
+.panel--inspector {
+  grid-area: inspector;
+  border-left: 1px solid var(--color-border);
+}
+
+.app-shell[data-layers-collapsed='true'] .panel--layers,
+.app-shell[data-inspector-collapsed='true'] .panel--inspector {
+  border-color: transparent;
+}
+
+.panel__header {
+  flex: none;
+  padding: var(--space-sm) var(--space-md);
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel__body {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-md);
+  color: var(--color-text-muted);
+}
+
+.panel__resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 10;
+  background: transparent;
+}
+
+.panel__resize-handle:hover,
+.panel__resize-handle[data-active='true'] {
+  background: var(--color-accent);
+  opacity: 0.4;
+}
+
+.panel--layers .panel__resize-handle {
+  right: -3px;
+}
+
+.panel--inspector .panel__resize-handle {
+  left: -3px;
+}
+
+/* Resize handles only make sense in the landscape (side-by-side) layouts. */
+html[data-breakpoint='tablet-portrait'] .panel__resize-handle,
+html[data-breakpoint='mobile-portrait'] .panel__resize-handle {
+  display: none;
+}
+
+html[data-breakpoint='tablet-portrait'] .panel--layers,
+html[data-breakpoint='tablet-portrait'] .panel--inspector,
+html[data-breakpoint='mobile-portrait'] .panel--layers,
+html[data-breakpoint='mobile-portrait'] .panel--inspector {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  max-height: 40vh;
+}

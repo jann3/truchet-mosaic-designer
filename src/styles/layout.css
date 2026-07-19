@@ -1,0 +1,51 @@
+.app-shell {
+  display: grid;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  --layers-col-width: var(--panel-width);
+  --inspector-col-width: var(--panel-width);
+}
+
+/* ---- Desktop landscape & tablet landscape: three columns ---- */
+html[data-breakpoint='desktop-landscape'] .app-shell,
+html[data-breakpoint='tablet-landscape'] .app-shell {
+  grid-template-columns: var(--layers-col-width) 1fr var(--inspector-col-width);
+  grid-template-rows: var(--toolbar-height) 1fr;
+  grid-template-areas:
+    'toolbar toolbar toolbar'
+    'layers canvas inspector';
+}
+
+html[data-breakpoint='desktop-landscape'] .app-shell[data-layers-collapsed='true'],
+html[data-breakpoint='tablet-landscape'] .app-shell[data-layers-collapsed='true'] {
+  --layers-col-width: 0px;
+}
+
+html[data-breakpoint='desktop-landscape'] .app-shell[data-inspector-collapsed='true'],
+html[data-breakpoint='tablet-landscape'] .app-shell[data-inspector-collapsed='true'] {
+  --inspector-col-width: 0px;
+}
+
+/* ---- Tablet portrait & mobile portrait: stacked ---- */
+html[data-breakpoint='tablet-portrait'] .app-shell,
+html[data-breakpoint='mobile-portrait'] .app-shell {
+  grid-template-columns: 1fr;
+  grid-template-rows: var(--toolbar-height) minmax(40vh, 1fr) auto auto;
+  grid-template-areas:
+    'toolbar'
+    'canvas'
+    'layers'
+    'inspector';
+  overflow-y: auto;
+}
+
+html[data-breakpoint='tablet-portrait'] .app-shell[data-layers-collapsed='true'] .panel--layers,
+html[data-breakpoint='mobile-portrait'] .app-shell[data-layers-collapsed='true'] .panel--layers {
+  display: none;
+}
+
+html[data-breakpoint='tablet-portrait'] .app-shell[data-inspector-collapsed='true'] .panel--inspector,
+html[data-breakpoint='mobile-portrait'] .app-shell[data-inspector-collapsed='true'] .panel--inspector {
+  display: none;
+}
