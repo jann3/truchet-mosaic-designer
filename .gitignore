@@ -1,24 +1,11 @@
 __pycache__/
 *.pyc
 
-src-tauri/target/
-src-tauri/gen/
-client/assets/
-client/music/
-client/sounds/
-*-override.json
-player-knowledge.json
-player-settings.json
 graphify-out/
+*.png
 
 logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-ideas.txt
-notes.txt
 .claude/
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
