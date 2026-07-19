@@ -215,3 +215,34 @@ orientation from the mirrored/rotated source position. Mirroring swaps `diagonal
 diagonal maps onto itself under a half-turn) — both are pure functions of the grid, wired into the
 Inspector's Grid panel next to Generate and going through the same `history.record()` +
 `store.update()` as every other grid-replacing action, so they undo as a single step.
+
+### Phase 10 — Responsive Design Adaptation ✅
+
+Grid resizing (`document/gridResize.ts`, `resizeGrid`) changes the tile count in place rather than
+replacing the grid wholesale — the important distinction from Phase 4's "Generate", which already
+covered "put a brand-new pattern at size N×M" but always discarded whatever was there before. Since
+tile ids are deterministic (`r{row}c{column}`, from `createTile`), resizing is just a position
+lookup: for every (row, column) inside the new bounds, reuse the existing tile (id and orientation
+both preserved) if one was there, otherwise create a fresh default-orientation tile; any tile outside
+the new bounds is dropped. Reusing the same id — not just the same orientation — matters because
+selections reference triangles by id (`${tileId}:a`/`${tileId}:b`), so a surviving tile keeps every
+selection membership it had, with zero remapping needed.
+
+For tiles that fall outside the shrunk grid, `resizeGrid` also prunes any selection's `triangleIds`
+that pointed at them — otherwise a selection would keep dangling references to triangles that no
+longer exist. Layers and image assets aren't touched at all: layers reference a selection by id, not
+tiles directly, so a layer whose selection just lost some triangles keeps painting normally over
+whatever remains, and image fills store position/scale/rotation/crop as grid-independent normalized
+values, so they carry over unchanged (visually, an image may now cover more or less of the grid if
+the aspect ratio changed, but nothing about the transform itself is reset or distorted).
+
+The Inspector's Grid panel gained a second button, "Resize", next to "Generate" — both read the same
+Columns/Rows fields, but "Generate" replaces the grid with a new pattern (destructive) while "Resize"
+calls `resizeGrid` (preserves layers, selections, and images). Verified in-browser: built an 8×8
+alternate-rows grid, selected three triangles (two interior, one in the last row/column) and painted
+them via a solid-fill layer, then resized down to 5×5 — the out-of-bounds triangle was pruned from
+the selection (3 → 2) while the other two and the layer survived untouched, and every surviving
+tile's orientation matched exactly what it was before the resize (checked via the rendered SVG
+polygon points, not just visually). Growing back up to 8×9 confirmed the reverse: original tiles keep
+their exact orientation, new rows/columns fill in with the default orientation, and the preserved
+selection/layer kept painting the same two triangles.

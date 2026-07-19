@@ -10,49 +10,10 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–9 (application shell, document model, grid rendering, grid configuration controls, grid
-editing UX, selection system, layer system, image mask system, advanced composition tools) are
-complete — see `README.md`'s "Implementation progress" section for what shipped and where.
-
----
-
-# Phase 10 — Responsive Design Adaptation
-
-## Goal
-
-Handle changing canvas dimensions elegantly.
-
-This phase specifically addresses:
-
-```
-8×8
-
-becoming
-
-4×12
-```
-
-## Features
-
-Grid resizing:
-
-* increase columns
-* decrease columns
-* increase rows
-* decrease rows
-
-Preserve:
-
-* layers
-* images
-* selections
-* transforms
-
-Implement rules for:
-
-* adding tiles
-* removing tiles
-* remapping selections
+Phases 1–10 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX, selection system, layer system, image mask system, advanced composition tools, responsive
+design adaptation) are complete — see `README.md`'s "Implementation progress" section for what
+shipped and where.
 
 ---
 

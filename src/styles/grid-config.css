@@ -94,7 +94,13 @@
   border-color: var(--color-accent);
 }
 
+.grid-config__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
 .grid-config__generate {
+  flex: 1 1 0;
   padding: var(--space-sm) var(--space-md);
   font: inherit;
   font-weight: 600;
@@ -107,6 +113,22 @@
 
 .grid-config__generate:hover {
   filter: brightness(1.08);
+}
+
+.grid-config__resize {
+  flex: 1 1 0;
+  padding: var(--space-sm) var(--space-md);
+  font: inherit;
+  font-weight: 600;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.grid-config__resize:hover {
+  border-color: var(--color-accent);
 }
 
 .grid-config__symmetry-row {

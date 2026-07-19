@@ -2,6 +2,7 @@ import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
 import { GRID_PATTERNS, generatePatternedGrid, type GridPattern } from '../document/patternGenerators';
 import { mirrorHorizontal, mirrorVertical, rotate180 } from '../document/symmetryOperations';
+import { resizeGrid } from '../document/gridResize';
 import type { Grid } from '../document/types';
 
 const MIN_DIMENSION = 1;
@@ -139,11 +140,27 @@ export function createGridConfigPanel(store: DocumentStore, history: HistoryMana
   patternFieldset.appendChild(seedField);
   form.appendChild(patternFieldset);
 
+  const actionRow = document.createElement('div');
+  actionRow.className = 'grid-config__actions';
+
   const generateButton = document.createElement('button');
   generateButton.type = 'submit';
   generateButton.className = 'grid-config__generate';
   generateButton.textContent = 'Generate';
-  form.appendChild(generateButton);
+  generateButton.title = 'Replace the grid with a new pattern at this size';
+
+  const resizeButton = document.createElement('button');
+  resizeButton.type = 'button';
+  resizeButton.className = 'grid-config__resize';
+  resizeButton.textContent = 'Resize';
+  resizeButton.title = 'Change the grid size, keeping existing tiles, layers and selections';
+  resizeButton.addEventListener('click', () => {
+    history.record();
+    store.update((doc) => resizeGrid(doc, state.columns, state.rows));
+  });
+
+  actionRow.append(generateButton, resizeButton);
+  form.appendChild(actionRow);
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
