@@ -8,6 +8,7 @@ import { ResizablePanel } from './ResizablePanel';
 import { createLayersPanelContent } from './LayersPanel';
 import { createInspectorPanelContent } from './InspectorPanel';
 import { createCanvasArea } from './CanvasArea';
+import { createExportDialog } from './ExportDialog';
 
 const PANEL_MIN_WIDTH = 160;
 const PANEL_MAX_WIDTH = 448;
@@ -60,7 +61,10 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
     toolbar.inspectorButton.setAttribute('aria-pressed', String(!collapsed));
   });
 
-  shell.append(toolbar.element, layersPanel.element, canvasArea, inspectorPanel.element);
+  const exportDialog = createExportDialog(store);
+  toolbar.exportButton.addEventListener('click', () => exportDialog.open());
+
+  shell.append(toolbar.element, layersPanel.element, canvasArea, inspectorPanel.element, exportDialog.element);
 
   return shell;
 }

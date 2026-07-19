@@ -246,3 +246,62 @@ tile's orientation matched exactly what it was before the resize (checked via th
 polygon points, not just visually). Growing back up to 8×9 confirmed the reverse: original tiles keep
 their exact orientation, new rows/columns fill in with the default orientation, and the preserved
 selection/layer kept painting the same two triangles.
+
+### Phase 11 — Export System ✅
+
+Exporting reuses the live renderer's compositing logic rather than re-implementing it: Phase 7/8's
+layer-painting code (gradients, image clips, blend modes) was pulled out of `TruchetRenderer` into a
+standalone `render/svgLayers.ts` (`renderDocumentLayers`), which both the live, subscribed canvas and
+the new export path now call — so a layer can never render one way on screen and another way in an
+export. `render/exportSvg.ts` (`buildExportSvg`) builds on top of that: a self-contained `<svg>`
+independent of any live DOM or app stylesheet, since a downloaded file can't reference
+`variables.css`. It reads the app's current `--color-text`/`--color-surface` theme values straight off
+`document.documentElement` via `getComputedStyle` rather than hardcoding a second copy of those hex
+values, so the export always matches whatever the editor is actually showing. Per `CLAUDE.md`'s "grid
+never owns the artwork" principle and Phase 7's design, the base black/white grid is always part of
+the exported artwork, not just an editing aid — layers composite on top of it exactly as they do
+on-screen.
+
+Two export-only options apply on top of that base render: `transparentBackground` omits each tile's
+"surface" (light) triangle instead of painting it white, so the "ink" (dark) triangles and any layer
+content sit on alpha instead of a white backing; `includeGridLines` overlays a thin semi-transparent
+stroke around every tile square as a design reference, layered on top of everything else so it's
+never hidden by an opaque layer.
+
+`export/exportDocument.ts` turns that SVG into a download. Vector export (`exportVectorSvg`) just
+serializes it. Raster export (`exportRaster`) resizes the SVG's `width`/`height` to the chosen
+resolution (the longer of columns/rows maps to the resolution value, the other scales to match, so
+non-square grids export without distortion), loads it into an off-screen `Image` via a blob URL,
+draws that onto a canvas, and reads back a PNG/JPEG/WebP blob via `canvas.toBlob`. Since asset images
+are already stored as data URLs (Phase 7), there's no CORS taint risk in reading the canvas back.
+JPEG has no alpha channel, so `exportRaster` unconditionally forces `transparentBackground` off for
+that format rather than trusting the caller, so a stale/pre-existing setting can never silently
+produce a black-background JPEG. `canExportVector` gates SVG availability on there being no
+image-fill layer in the document — an image fill is inherently raster content, so it can't be
+represented in a vector export.
+
+The Export dialog (`ui/ExportDialog.ts`, opened via a new toolbar button) is a modal with a Format
+select, a Resolution radio group (1000/2000/4000px, hidden for SVG since vector output is
+resolution-independent), and the two checkboxes above (Transparent background disables itself for
+JPG). Its settings persist onto `TruchetDocument.exportSettings` (already defined in `types.ts`, so
+this is forward-compatible with Phase 12 save/load) on every change — but deliberately without
+`history.record()`, unlike every other document mutation in the app: picking an export format isn't a
+creative edit, so it shouldn't be a step in the undo stack. One re-entrancy pitfall surfaced while
+writing the dialog: its `render()` initially tried to auto-correct a stale `format: 'svg'` (e.g. left
+over from before an image layer was added) by calling `store.update()` from inside the same render
+pass, which — since `DocumentStore.notify()` calls listeners synchronously and `render` is itself a
+listener — recursed back into `render()` before the outer call had appended its own DOM, producing a
+duplicated dialog body. Fixed by never writing that correction to the store at all: an `effectiveFormat()`
+helper computes the display/export fallback locally, so `svg` only ever reaches the document if the
+user actually picks it while it's valid.
+
+Verified in-browser: built an 8×8 grid, painted two triangles red via a selection-backed layer, then
+exported PNG at 1000px with grid lines and transparent background both on — confirmed the downloaded
+file is exactly 1000×1000, decoded its raw pixels and found the layer's red triangle opaque, the
+untouched "ink" triangles opaque at the exact `--color-text` value, the untouched "surface" triangles
+fully transparent (alpha 0), and a semi-transparent grey pixel at every tile boundary from the grid
+line overlay. Switched to SVG format (resolution control correctly disappears) and exported: the
+downloaded file is a valid standalone `<svg>` with all 64 base triangles, the two red layer
+polygons, and the grid-line `<rect>` overlay, openable with no external dependencies. Switched to JPG
+and confirmed "Transparent background" auto-unchecks and disables; exported successfully with no
+console errors across all three raster formats plus SVG.

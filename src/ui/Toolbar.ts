@@ -7,6 +7,7 @@ export interface ToolbarHandle {
   inspectorButton: HTMLButtonElement;
   undoButton: HTMLButtonElement;
   redoButton: HTMLButtonElement;
+  exportButton: HTMLButtonElement;
 }
 
 function createToggleButton(label: string): HTMLButtonElement {
@@ -95,7 +96,10 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
   const inspectorButton = createToggleButton('Inspector');
 
   panelGroup.append(layersButton, inspectorButton);
-  element.append(brand, historyGroup, modeGroup, spacer, panelGroup);
 
-  return { element, layersButton, inspectorButton, undoButton, redoButton };
+  const exportButton = createActionButton('Export', 'Export the design as an image or SVG');
+
+  element.append(brand, historyGroup, modeGroup, spacer, exportButton, panelGroup);
+
+  return { element, layersButton, inspectorButton, undoButton, redoButton, exportButton };
 }

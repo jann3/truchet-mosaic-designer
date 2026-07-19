@@ -10,57 +10,10 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–10 (application shell, document model, grid rendering, grid configuration controls, grid
+Phases 1–11 (application shell, document model, grid rendering, grid configuration controls, grid
 editing UX, selection system, layer system, image mask system, advanced composition tools, responsive
-design adaptation) are complete — see `README.md`'s "Implementation progress" section for what
-shipped and where.
-
----
-
-# Phase 11 — Export System
-
-## Goal
-
-Export completed designs.
-
-## Vector export
-
-Available when:
-
-* no image layers
-* no unsupported effects
-
-Formats:
-
-* SVG
-
----
-
-## Raster export
-
-Always available.
-
-Formats:
-
-* PNG
-* JPG
-* WebP
-
-Controls:
-
-```
-Export
-
-Resolution
-
-1000px
-2000px
-4000px
-
-Transparent Background
-
-Include Grid Lines
-```
+design adaptation, export system) are complete — see `README.md`'s "Implementation progress" section
+for what shipped and where.
 
 ---
 
