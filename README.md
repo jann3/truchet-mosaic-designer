@@ -305,3 +305,59 @@ downloaded file is a valid standalone `<svg>` with all 64 base triangles, the tw
 polygons, and the grid-line `<rect>` overlay, openable with no external dependencies. Switched to JPG
 and confirmed "Transparent background" auto-unchecks and disables; exported successfully with no
 console errors across all three raster formats plus SVG.
+
+### Phase 12 — Save / Load / Project Files ✅
+
+The `.truchet` project format is just the `TruchetDocument` itself, wrapped with a format version:
+`{ version, document }` (`project/serialization.ts`). No separate save schema was needed — every
+document field, including image assets (already data URLs since Phase 7) and per-layer transforms
+(position/scale/rotation, already part of `LayerFill`), round-trips as plain JSON with no extra
+encoding step. `deserializeDocument` validates the parsed shape (required fields present, arrays
+where arrays are expected, version not newer than this app supports) before handing it to the
+store, so a corrupt or foreign file fails with a message instead of crashing the editor.
+`project/projectFile.ts` turns that into a real file: `downloadProjectFile` triggers a
+`.truchet` download the same way Phase 11's exports do, and `readProjectFile` reads a picked
+`File` back into a document.
+
+`project/ProjectController.ts` is the non-UI controller (parallel to `DocumentStore` and
+`HistoryManager`) that owns New/Save/Open and unsaved-changes tracking. It subscribes to the
+`DocumentStore` directly: *any* store update — not just project-menu actions — marks the project
+dirty, since a grid edit, layer change, or selection tweak is exactly the kind of change a user
+doesn't want to lose. Loading a new document resets `HistoryManager`'s undo/redo stacks (a new
+`reset()` method) so a freshly opened project can't be undone back into the document it replaced.
+
+Autosave is unconditional and debounced: every document change schedules a write of the current
+document to `localStorage` a second later (coalescing rapid edits, e.g. a paint drag, into one
+write), independent of whether the user has ever explicitly saved. On startup,
+`ProjectController` checks for a leftover autosave entry and exposes it as `pendingRecovery`;
+`AppShell` offers to restore it via a confirm dialog before the user does anything else. Restoring
+loads that document and marks it dirty (it was never an explicit save, just a safety net);
+discarding clears the `localStorage` entry so the prompt doesn't reappear on the next reload. An
+explicit Save or successful Open also clears the pending-recovery entry and, for Save, the
+`localStorage` copy — a `.truchet` file (or the just-loaded document) is now the safety net, so the
+in-progress autosave from before that point is no longer relevant. `localStorage.setItem` is
+wrapped in a try/catch so a full quota or private-browsing restrictions degrade autosave silently
+rather than breaking the app.
+
+New UI: `ui/ConfirmDialog.ts` is a small reusable modal (`confirm({ title, message, confirmLabel,
+cancelLabel })` returning a `Promise<boolean>`) built the same backdrop-modal way as
+`ExportDialog`, deliberately avoiding `window.confirm`/`alert` so behavior stays consistent and
+scriptable. Passing `cancelLabel: null` hides the Cancel button, turning it into a plain
+acknowledgement dialog — used for the "could not open project" error case. The toolbar gained a
+New/Save/Open button group (Open uses a hidden `<input type="file" accept=".truchet">`) and a
+project-status label showing the document name with a trailing "•" while dirty. New and Open both
+route through the same confirm dialog when the document is dirty ("This discards your unsaved
+changes") before proceeding.
+
+Verified in-browser: flipped a tile, confirmed the toolbar label switched to "Untitled Mosaic •";
+waited for the autosave debounce and found the entry in `localStorage`; reloaded the page and got
+the "Restore autosaved project?" prompt, confirmed Restore reproduced the exact flipped tile;
+clicked Save and inspected the downloaded `.truchet` file directly — valid JSON, `version: 1`, 64
+tiles, the flipped tile's `orientation: "diagonal-b"` intact — and confirmed the dirty dot cleared.
+Clicked New with a clean document (no prompt, as expected) and loaded a project file via a
+programmatically-populated file input, confirming the document name and tile orientations restored
+correctly. Made an edit, then triggered Open again: the "discards your unsaved changes" prompt
+appeared with the target filename in the message; confirmed both Cancel (aborts, edit preserved)
+and loading a deliberately malformed file (shows a "Could not open project" alert with the parse
+error, and — since the failure happens before the store is touched — leaves the current document
+completely unchanged). No console errors in any of these flows.

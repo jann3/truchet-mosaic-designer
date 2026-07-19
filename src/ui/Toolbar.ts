@@ -8,6 +8,11 @@ export interface ToolbarHandle {
   undoButton: HTMLButtonElement;
   redoButton: HTMLButtonElement;
   exportButton: HTMLButtonElement;
+  newButton: HTMLButtonElement;
+  saveButton: HTMLButtonElement;
+  openButton: HTMLButtonElement;
+  openFileInput: HTMLInputElement;
+  projectStatus: HTMLElement;
 }
 
 function createToggleButton(label: string): HTMLButtonElement {
@@ -27,6 +32,31 @@ function createActionButton(label: string, ariaLabel: string): HTMLButtonElement
   button.title = ariaLabel;
   button.setAttribute('aria-label', ariaLabel);
   return button;
+}
+
+function createFileGroup(): {
+  group: HTMLElement;
+  newButton: HTMLButtonElement;
+  saveButton: HTMLButtonElement;
+  openButton: HTMLButtonElement;
+  openFileInput: HTMLInputElement;
+} {
+  const group = document.createElement('div');
+  group.className = 'toolbar__group';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', 'Project file');
+
+  const newButton = createActionButton('New', 'Start a new, empty project');
+  const saveButton = createActionButton('Save', 'Save the project to a .truchet file');
+  const openButton = createActionButton('Open', 'Open a .truchet project file');
+
+  const openFileInput = document.createElement('input');
+  openFileInput.type = 'file';
+  openFileInput.accept = '.truchet';
+  openFileInput.hidden = true;
+
+  group.append(newButton, saveButton, openButton, openFileInput);
+  return { group, newButton, saveButton, openButton, openFileInput };
 }
 
 function createModeGroup(editorMode: EditorModeStore): HTMLElement {
@@ -61,6 +91,11 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
   const brand = document.createElement('span');
   brand.className = 'toolbar__brand';
   brand.textContent = 'Truchet Mosaic Designer';
+
+  const projectStatus = document.createElement('span');
+  projectStatus.className = 'toolbar__project-status';
+
+  const { group: fileGroup, newButton, saveButton, openButton, openFileInput } = createFileGroup();
 
   const historyGroup = document.createElement('div');
   historyGroup.className = 'toolbar__group';
@@ -99,7 +134,19 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
 
   const exportButton = createActionButton('Export', 'Export the design as an image or SVG');
 
-  element.append(brand, historyGroup, modeGroup, spacer, exportButton, panelGroup);
+  element.append(brand, projectStatus, fileGroup, historyGroup, modeGroup, spacer, exportButton, panelGroup);
 
-  return { element, layersButton, inspectorButton, undoButton, redoButton, exportButton };
+  return {
+    element,
+    layersButton,
+    inspectorButton,
+    undoButton,
+    redoButton,
+    exportButton,
+    newButton,
+    saveButton,
+    openButton,
+    openFileInput,
+    projectStatus,
+  };
 }

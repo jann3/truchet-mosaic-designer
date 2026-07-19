@@ -41,6 +41,13 @@ export class HistoryManager {
     this.notify();
   }
 
+  /** Clears undo/redo history without touching the document — for loading a new/opened project, where the prior document's edits shouldn't be reachable via undo. */
+  reset(): void {
+    this.undoStack = [];
+    this.redoStack = [];
+    this.notify();
+  }
+
   get canUndo(): boolean {
     return this.undoStack.length > 0;
   }

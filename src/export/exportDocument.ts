@@ -1,5 +1,6 @@
 import type { TruchetDocument } from '../document/types';
 import { buildExportSvg } from '../render/exportSvg';
+import { sanitizeFilename } from '../utils/sanitizeFilename';
 
 export type RasterFormat = 'png' | 'jpg' | 'webp';
 
@@ -27,10 +28,6 @@ const MIME_BY_FORMAT: Record<RasterFormat, string> = {
  */
 export function canExportVector(doc: TruchetDocument): boolean {
   return !doc.layers.some((layer) => layer.fill.type === 'image');
-}
-
-function sanitizeFilename(name: string): string {
-  return name.trim().replace(/[\\/:*?"<>|]+/g, '-') || 'mosaic';
 }
 
 function downloadBlob(blob: Blob, filename: string): void {

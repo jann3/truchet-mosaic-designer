@@ -10,42 +10,10 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–11 (application shell, document model, grid rendering, grid configuration controls, grid
+Phases 1–12 (application shell, document model, grid rendering, grid configuration controls, grid
 editing UX, selection system, layer system, image mask system, advanced composition tools, responsive
-design adaptation, export system) are complete — see `README.md`'s "Implementation progress" section
-for what shipped and where.
-
----
-
-# Phase 12 — Save / Load / Project Files
-
-## Goal
-
-Allow users to save editable designs.
-
-Implement:
-
-Project format:
-
-```
-.truchet
-```
-
-Containing:
-
-* document settings
-* grid
-* layers
-* selections
-* image assets
-* transforms
-
-Features:
-
-* new project
-* save
-* load
-* autosave
+design adaptation, export system, save/load/project files) are complete — see `README.md`'s
+"Implementation progress" section for what shipped and where.
 
 ---
 

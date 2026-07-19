@@ -9,6 +9,8 @@ import { createLayersPanelContent } from './LayersPanel';
 import { createInspectorPanelContent } from './InspectorPanel';
 import { createCanvasArea } from './CanvasArea';
 import { createExportDialog } from './ExportDialog';
+import { createConfirmDialog } from './ConfirmDialog';
+import { ProjectController } from '../project/ProjectController';
 
 const PANEL_MIN_WIDTH = 160;
 const PANEL_MAX_WIDTH = 448;
@@ -64,7 +66,82 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
   const exportDialog = createExportDialog(store);
   toolbar.exportButton.addEventListener('click', () => exportDialog.open());
 
-  shell.append(toolbar.element, layersPanel.element, canvasArea, inspectorPanel.element, exportDialog.element);
+  const project = new ProjectController(store, history);
+  const confirmDialog = createConfirmDialog();
+
+  const updateProjectStatus = (): void => {
+    const doc = store.get();
+    toolbar.projectStatus.textContent = project.dirty ? `${doc.name} •` : doc.name;
+    toolbar.projectStatus.title = project.dirty ? 'Unsaved changes' : 'All changes saved';
+  };
+  updateProjectStatus();
+  store.subscribe(updateProjectStatus);
+  project.subscribe(updateProjectStatus);
+
+  toolbar.newButton.addEventListener('click', async () => {
+    if (project.dirty) {
+      const proceed = await confirmDialog.confirm({
+        title: 'Start new project?',
+        message: 'This discards your unsaved changes. This cannot be undone.',
+        confirmLabel: 'Discard & start new',
+      });
+      if (!proceed) return;
+    }
+    project.newProject();
+  });
+
+  toolbar.saveButton.addEventListener('click', () => project.save());
+
+  toolbar.openButton.addEventListener('click', () => toolbar.openFileInput.click());
+  toolbar.openFileInput.addEventListener('change', async () => {
+    const file = toolbar.openFileInput.files?.[0];
+    toolbar.openFileInput.value = '';
+    if (!file) return;
+
+    if (project.dirty) {
+      const proceed = await confirmDialog.confirm({
+        title: 'Open project?',
+        message: `Opening "${file.name}" discards your unsaved changes. This cannot be undone.`,
+        confirmLabel: 'Discard & open',
+      });
+      if (!proceed) return;
+    }
+
+    try {
+      await project.load(file);
+    } catch (error) {
+      await confirmDialog.confirm({
+        title: 'Could not open project',
+        message: error instanceof Error ? error.message : 'That file is not a valid Truchet project.',
+        confirmLabel: 'OK',
+        cancelLabel: null,
+      });
+    }
+  });
+
+  const recovery = project.pendingRecovery;
+  if (recovery) {
+    void confirmDialog
+      .confirm({
+        title: 'Restore autosaved project?',
+        message: `Found unsaved work autosaved on ${new Date(recovery.savedAt).toLocaleString()}. Restore it, or discard and start fresh?`,
+        confirmLabel: 'Restore',
+        cancelLabel: 'Discard',
+      })
+      .then((restore) => {
+        if (restore) project.restorePendingRecovery();
+        else project.dismissPendingRecovery();
+      });
+  }
+
+  shell.append(
+    toolbar.element,
+    layersPanel.element,
+    canvasArea,
+    inspectorPanel.element,
+    exportDialog.element,
+    confirmDialog.element,
+  );
 
   return shell;
 }
