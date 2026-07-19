@@ -1,4 +1,5 @@
 import type { DocumentStore } from '../document/DocumentStore';
+import type { HistoryManager } from '../edit/HistoryManager';
 import { GRID_PATTERNS, generatePatternedGrid, type GridPattern } from '../document/patternGenerators';
 
 const MIN_DIMENSION = 1;
@@ -47,7 +48,7 @@ function createNumberField(
  * `grid` on the document via `generatePatternedGrid`, leaving everything else
  * (layers, selections, assets) untouched.
  */
-export function createGridConfigPanel(store: DocumentStore): HTMLElement {
+export function createGridConfigPanel(store: DocumentStore, history: HistoryManager): HTMLElement {
   const initialGrid = store.get().grid;
 
   const state = {
@@ -144,6 +145,7 @@ export function createGridConfigPanel(store: DocumentStore): HTMLElement {
 
   form.addEventListener('submit', (event) => {
     event.preventDefault();
+    history.record();
     store.update((doc) => ({
       ...doc,
       grid: generatePatternedGrid(state.columns, state.rows, state.pattern, state.seed),

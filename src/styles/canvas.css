@@ -43,3 +43,17 @@
   stroke: var(--color-surface);
   stroke-width: 0.02;
 }
+
+.truchet-grid__triangle--a,
+.truchet-grid__triangle--b {
+  cursor: pointer;
+}
+
+.truchet-grid__triangle--hover {
+  opacity: 0.85;
+}
+
+.truchet-grid__triangle--selected {
+  stroke: var(--color-accent);
+  stroke-width: 0.05;
+}

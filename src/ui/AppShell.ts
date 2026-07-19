@@ -1,4 +1,5 @@
 import type { DocumentStore } from '../document/DocumentStore';
+import type { HistoryManager } from '../edit/HistoryManager';
 import { createToolbar } from './Toolbar';
 import { ResizablePanel } from './ResizablePanel';
 import { createLayersPanelContent } from './LayersPanel';
@@ -9,7 +10,7 @@ const PANEL_MIN_WIDTH = 160;
 const PANEL_MAX_WIDTH = 448;
 const PANEL_INITIAL_WIDTH = 280;
 
-export function createAppShell(store: DocumentStore): HTMLElement {
+export function createAppShell(store: DocumentStore, history: HistoryManager): HTMLElement {
   const shell = document.createElement('div');
   shell.className = 'app-shell';
 
@@ -34,11 +35,11 @@ export function createAppShell(store: DocumentStore): HTMLElement {
     min: PANEL_MIN_WIDTH,
     max: PANEL_MAX_WIDTH,
     initial: PANEL_INITIAL_WIDTH,
-    content: createInspectorPanelContent(store),
+    content: createInspectorPanelContent(store, history),
   });
 
-  const canvasArea = createCanvasArea(store);
-  const toolbar = createToolbar();
+  const canvasArea = createCanvasArea(store, history);
+  const toolbar = createToolbar(history);
 
   toolbar.layersButton.addEventListener('click', () => {
     const collapsed = layersPanel.toggleCollapsed();

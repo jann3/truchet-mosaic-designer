@@ -2,6 +2,7 @@ import './styles/main.css';
 import { ViewportManager } from './viewport/ViewportManager';
 import { createAppShell } from './ui/AppShell';
 import { DocumentStore } from './document/DocumentStore';
+import { HistoryManager } from './edit/HistoryManager';
 
 const appRoot = document.querySelector<HTMLDivElement>('#app');
 if (!appRoot) {
@@ -10,4 +11,5 @@ if (!appRoot) {
 
 new ViewportManager();
 const documentStore = new DocumentStore();
-appRoot.appendChild(createAppShell(documentStore));
+const historyManager = new HistoryManager(documentStore);
+appRoot.appendChild(createAppShell(documentStore, historyManager));

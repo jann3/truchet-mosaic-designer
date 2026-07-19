@@ -46,3 +46,12 @@
   background: var(--color-accent);
   color: var(--color-accent-contrast);
 }
+
+.toolbar__button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.toolbar__button:disabled:hover {
+  background: transparent;
+}

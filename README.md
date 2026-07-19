@@ -75,3 +75,23 @@ results are reproducible on demand. Random uses a small seeded PRNG (mulberry32)
 replaces only `document.grid` via `DocumentStore.update`, leaving the rest of the document
 untouched; the renderer picks up the change immediately through its existing subscription from
 Phase 3, with no changes needed there.
+
+### Phase 5 — Grid Editing UX ✅
+
+The canvas is now directly editable (`src/edit/`). `GridEditingController` listens for pointer and
+keyboard events on the renderer's SVG: a plain click flips the clicked tile's orientation and
+selects its triangle; dragging paints a run of tiles to the orientation the drag started with (so
+retracing over an already-painted tile is a no-op, not a re-flip); shift-click toggles a triangle
+into/out of a multi-selection without touching orientation; Escape clears the selection. Hover and
+selection are tracked by a small `SelectionEngine` at triangle granularity (`tileId:a`/`tileId:b`),
+kept separate from the document — it's ephemeral interaction state, not the reusable named
+`Selection`s planned for Phase 6. `TruchetRenderer` mirrors that state onto the affected SVG
+polygons directly (`src/styles/canvas.css`'s `--hover`/`--selected` classes) rather than
+re-rendering the grid on every hover change.
+
+Undo/redo is a generic `HistoryManager` wrapping `DocumentStore` snapshots, not tile-specific:
+callers call `history.record()` immediately before whichever `store.update()` call(s) they want
+undoable, so a whole paint drag (many tile updates) or a grid regeneration (the Phase 4 Generate
+button, now wired through history too) each undo as a single step. Wired to toolbar Undo/Redo
+buttons (enabled state follows `canUndo`/`canRedo`) and to Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z / Ctrl+Y,
+guarded to skip while a text input has focus.

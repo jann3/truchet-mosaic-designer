@@ -1,5 +1,11 @@
 import type { Tile } from '../document/types';
 
+export type TriangleHalf = 'a' | 'b';
+
+export function getTriangleId(tileId: string, half: TriangleHalf): string {
+  return `${tileId}:${half}`;
+}
+
 type Point = readonly [number, number];
 
 export interface Triangle {

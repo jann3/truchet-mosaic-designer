@@ -10,47 +10,9 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–4 (application shell, document model, grid rendering, grid configuration controls) are
-complete — see `README.md`'s "Implementation progress" section for what shipped and where.
-
----
-
-# Phase 5 — Grid Editing UX
-
-## Goal
-
-Allow users to manually modify tiles.
-
-## Features
-
-Basic editing:
-
-* click tile → flip orientation
-* drag painting
-* shift-click
-* undo/redo
-
-Selection highlighting:
-
-* hovered triangle
-* selected triangle
-* active layer triangles
-
-## Implement
-
-Selection engine:
-
-```
-Selection
-
-Triangle IDs[]
-```
-
-Support:
-
-* individual triangle selection
-* multiple selection
-* clear selection
+Phases 1–5 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX) are complete — see `README.md`'s "Implementation progress" section for what shipped and
+where.
 
 ---
 
