@@ -39,3 +39,16 @@ ones — no fixed pixel dimensions anywhere. The Layers and Inspector panels are
 resizable and can be collapsed via toolbar toggle buttons. The canvas area, toolbar, and both side
 panels are currently placeholders awaiting the document model (Phase 2) and rendering engine
 (Phase 3).
+
+### Phase 2 — Document Model & Coordinate System ✅
+
+Added the design representation the rest of the app will read and write through, kept entirely
+independent of screen size (`src/document/`). A `TruchetDocument` holds a `Grid` (columns, rows,
+and a flat `Tile[]` with row/column/orientation), plus empty `layers`, `selections`, and `assets`
+arrays and default `exportSettings`, all produced by `createDocument()`/`createGrid()`. Tile and
+image positions are expressed in normalized `0.0–1.0` coordinates rather than pixels
+(`coordinates.ts`: `normalizedToPixel`, `pixelToNormalized`, `getTileBounds`), so the model stays
+valid across any canvas size or aspect ratio. A small `DocumentStore` holds the active document in
+memory with a `subscribe`/`update` API, ready for the rendering engine (Phase 3) and editing UX
+(Phase 5) to consume — it isn't wired into the UI yet since there's nothing to render or edit
+until those phases land.
