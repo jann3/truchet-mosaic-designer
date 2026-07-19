@@ -2,6 +2,7 @@ import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
 import { EditorModeStore } from '../edit/EditorModeStore';
 import { ActiveSelectionStore } from '../edit/ActiveSelectionStore';
+import { SelectedLayerStore } from '../edit/SelectedLayerStore';
 import { createToolbar } from './Toolbar';
 import { ResizablePanel } from './ResizablePanel';
 import { createLayersPanelContent } from './LayersPanel';
@@ -18,6 +19,7 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
 
   const editorMode = new EditorModeStore();
   const activeSelection = new ActiveSelectionStore();
+  const selectedLayer = new SelectedLayerStore();
 
   const layersPanel = new ResizablePanel({
     id: 'layers',
@@ -28,7 +30,7 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
     min: PANEL_MIN_WIDTH,
     max: PANEL_MAX_WIDTH,
     initial: PANEL_INITIAL_WIDTH,
-    content: createLayersPanelContent(store, history),
+    content: createLayersPanelContent(store, history, selectedLayer),
   });
 
   const inspectorPanel = new ResizablePanel({
@@ -43,7 +45,7 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
     content: createInspectorPanelContent(store, history, editorMode, activeSelection),
   });
 
-  const canvasArea = createCanvasArea(store, history, editorMode, activeSelection);
+  const canvasArea = createCanvasArea(store, history, editorMode, activeSelection, selectedLayer);
   const toolbar = createToolbar(history, editorMode);
 
   toolbar.layersButton.addEventListener('click', () => {

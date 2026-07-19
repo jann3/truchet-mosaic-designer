@@ -145,3 +145,34 @@ fields for now; drag/resize/rotate handles on the canvas are Phase 8.
 Deleting a `Selection` that a layer references clears that layer's reference back to `null`
 (`selectionsCrud.ts`) rather than leaving it dangling, so a referencing layer just stops rendering
 instead of erroring.
+
+### Phase 8 — Image Mask System ✅
+
+Image fills gained a `crop` rectangle (`document/types.ts`'s `NormalizedRect`) — a sub-region of
+the source asset, normalized 0.0–1.0, defaulting to the full image — plus interactive on-canvas
+move/resize/rotate handles, replacing Phase 7's numeric-fields-only workflow (the fields are still
+there for precise entry; the handles are additive). `render/imageFillGeometry.ts` computes the
+image's display rect, its crop-adjusted source placement, and center point from
+`{position, scale, rotation, crop}` — the single source of truth both `TruchetRenderer` (rendering)
+and the new `ImageOverlayController` (handles) read from, so the two can never disagree about where
+the image actually is.
+
+Rendering an image fill is now three nested clip groups: an outer group clipped to the selection's
+triangle polygons (the mask — fixed to the grid, unaffected by the image's own transform), a
+rotation group turning the image and its crop together around the display rect's center, and an
+inner group clipped to the crop rectangle in the image's local space. The oversized, unclipped
+`<image>` element sits inside all three, positioned so its crop sub-rect lines up exactly with the
+visible display rect.
+
+Selecting a layer (click its row in the Layers panel — a new `SelectedLayerStore`, alongside Phase
+6's `EditorModeStore`/`ActiveSelectionStore`) draws move/resize/rotate handles over it on the
+canvas when its fill is an image, via `ImageOverlayController` (`src/edit/`). Handle drags follow
+the same pattern as Phase 5's `GridEditingController` paint-drag: `history.record()` once on
+pointerdown, then `store.update()` on every pointermove, so a whole drag gesture undoes as a single
+step. Handle size and the rotate handle's offset from the image are computed in screen pixels each
+render (via the SVG's `getScreenCTM()`) rather than fixed grid units — grid-unit-to-pixel ratio
+varies hugely with grid size, so a fixed-unit offset put the rotate handle off-screen for small
+grids reaching the canvas edge. The move handle is the display rect itself; it needed
+`pointer-events: all` rather than `auto`; since the rect has `fill: none`, `auto` (≈
+`visiblePainted`) only hit-tests the stroke outline, not the interior, which was letting drags fall
+through to the grid underneath.

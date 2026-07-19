@@ -10,70 +10,9 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–7 (application shell, document model, grid rendering, grid configuration controls, grid
-editing UX, selection system, layer system) are complete — see `README.md`'s "Implementation
-progress" section for what shipped and where.
-
----
-
-# Phase 8 — Image Mask System
-
-## Goal
-
-Allow images to fill triangle selections.
-
-This is the core creative feature.
-
-## Implement image layers
-
-Image properties:
-
-```
-Image
-
-Position
-X
-Y
-
-Scale
-
-Rotation
-
-Crop
-
-Opacity
-```
-
-## Image interaction
-
-When selected:
-
-* drag image
-* resize image
-* rotate image
-* reposition image
-
-## Mask behaviour
-
-The image exists independently.
-
-Triangles reveal the image.
-
-Example:
-
-```
-Obama Image
-
-        ↓
-
-Black Triangle Selection
-
-        ↓
-
-Rendered Mosaic
-```
-
-Changing the grid does not destroy the image placement.
+Phases 1–8 (application shell, document model, grid rendering, grid configuration controls, grid
+editing UX, selection system, layer system, image mask system) are complete — see `README.md`'s
+"Implementation progress" section for what shipped and where.
 
 ---
 

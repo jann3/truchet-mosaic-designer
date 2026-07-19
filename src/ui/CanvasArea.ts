@@ -2,8 +2,10 @@ import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
 import type { EditorModeStore } from '../edit/EditorModeStore';
 import type { ActiveSelectionStore } from '../edit/ActiveSelectionStore';
+import type { SelectedLayerStore } from '../edit/SelectedLayerStore';
 import { SelectionEngine } from '../edit/SelectionEngine';
 import { GridEditingController } from '../edit/GridEditingController';
+import { ImageOverlayController } from '../edit/ImageOverlayController';
 import { TruchetRenderer } from '../render/TruchetRenderer';
 
 /** Mirrors the active named Selection's contents onto the canvas highlight while in select mode. */
@@ -36,6 +38,7 @@ export function createCanvasArea(
   history: HistoryManager,
   editorMode: EditorModeStore,
   activeSelection: ActiveSelectionStore,
+  selectedLayer: SelectedLayerStore,
 ): HTMLElement {
   const element = document.createElement('main');
   element.className = 'canvas-area';
@@ -47,6 +50,7 @@ export function createCanvasArea(
   const selectionEngine = new SelectionEngine();
   const renderer = new TruchetRenderer(viewport, store, selectionEngine);
   new GridEditingController(renderer.svg, store, history, selectionEngine, editorMode, activeSelection);
+  new ImageOverlayController(renderer.svg, store, history, selectedLayer);
   bindActiveSelectionHighlight(store, editorMode, activeSelection, selectionEngine);
 
   element.appendChild(viewport);

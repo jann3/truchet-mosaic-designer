@@ -55,10 +55,15 @@
   border-radius: var(--border-radius);
 }
 
+.layers__item--active {
+  border-color: var(--color-accent);
+}
+
 .layers__item-row {
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  cursor: pointer;
 }
 
 .layers__item-name {

@@ -1,5 +1,6 @@
 import type { DocumentStore } from '../document/DocumentStore';
 import type { HistoryManager } from '../edit/HistoryManager';
+import type { SelectedLayerStore } from '../edit/SelectedLayerStore';
 import type { Asset, BlendMode, Layer, LayerFill, Selection } from '../document/types';
 import {
   createLayer,
@@ -35,7 +36,14 @@ function defaultFillFor(type: LayerFill['type']): LayerFill {
       ],
     };
   }
-  return { type: 'image', assetId: '', position: { x: 0.5, y: 0.5 }, scale: 1, rotation: 0 };
+  return {
+    type: 'image',
+    assetId: '',
+    position: { x: 0.5, y: 0.5 },
+    scale: 1,
+    rotation: 0,
+    crop: { x: 0, y: 0, width: 1, height: 1 },
+  };
 }
 
 function readImageFile(file: File): Promise<{ src: string; width: number; height: number }> {
@@ -68,7 +76,11 @@ function bindCommittedInput(input: HTMLInputElement, history: HistoryManager, on
   });
 }
 
-export function createLayersPanelContent(store: DocumentStore, history: HistoryManager): HTMLElement {
+export function createLayersPanelContent(
+  store: DocumentStore,
+  history: HistoryManager,
+  selectedLayer: SelectedLayerStore,
+): HTMLElement {
   const root = document.createElement('div');
   root.className = 'layers';
 
@@ -123,9 +135,13 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
   function renderItem(layer: Layer, selections: Selection[], assets: Asset[]): HTMLElement {
     const item = document.createElement('li');
     item.className = 'layers__item';
+    item.classList.toggle('layers__item--active', layer.id === selectedLayer.get());
 
     const row = document.createElement('div');
     row.className = 'layers__item-row';
+    row.addEventListener('click', () => {
+      selectedLayer.set(selectedLayer.get() === layer.id ? null : layer.id);
+    });
 
     const visibilityButton = document.createElement('button');
     visibilityButton.type = 'button';
@@ -134,7 +150,8 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
     visibilityButton.setAttribute('aria-label', layer.visible ? 'Hide layer' : 'Show layer');
     visibilityButton.setAttribute('aria-pressed', String(layer.visible));
     visibilityButton.textContent = layer.visible ? '\u{1F441}' : '\u{2014}';
-    visibilityButton.addEventListener('click', () => {
+    visibilityButton.addEventListener('click', (event) => {
+      event.stopPropagation();
       history.record();
       store.update((doc) => setLayerVisibility(doc, layer.id, !layer.visible));
     });
@@ -152,9 +169,11 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
     deleteButton.title = 'Delete';
     deleteButton.setAttribute('aria-label', 'Delete layer');
     deleteButton.textContent = '\u{2715}';
-    deleteButton.addEventListener('click', () => {
+    deleteButton.addEventListener('click', (event) => {
+      event.stopPropagation();
       history.record();
       store.update((doc) => deleteLayer(doc, layer.id));
+      if (selectedLayer.get() === layer.id) selectedLayer.set(null);
     });
 
     row.append(visibilityButton, nameButton, deleteButton);
@@ -455,8 +474,17 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
     nameRow.append(nameLabel);
     wrapper.appendChild(nameRow);
 
-    const commitTransform = (position: { x: number; y: number }, scale: number, rotation: number): void => {
-      store.update((doc) => setLayerFill(doc, layer.id, { type: 'image', assetId: asset.id, position, scale, rotation }));
+    const crop = fill.crop;
+
+    const commitTransform = (
+      position: { x: number; y: number },
+      scale: number,
+      rotation: number,
+      cropRect: { x: number; y: number; width: number; height: number },
+    ): void => {
+      store.update((doc) =>
+        setLayerFill(doc, layer.id, { type: 'image', assetId: asset.id, position, scale, rotation, crop: cropRect }),
+      );
     };
 
     const positionRow = document.createElement('div');
@@ -481,19 +509,53 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
     rotationRow.append(rotationInput);
     wrapper.appendChild(rotationRow);
 
+    const cropPosRow = document.createElement('div');
+    cropPosRow.className = 'layers__setting-row';
+    cropPosRow.append(labelSpan('Crop XY'));
+    const cropX = numberInput(crop.x, 0, 1, 0.01);
+    const cropY = numberInput(crop.y, 0, 1, 0.01);
+    cropPosRow.append(cropX, cropY);
+    wrapper.appendChild(cropPosRow);
+
+    const cropSizeRow = document.createElement('div');
+    cropSizeRow.className = 'layers__setting-row';
+    cropSizeRow.append(labelSpan('Crop WH'));
+    const cropWidth = numberInput(crop.width, 0.01, 1, 0.01);
+    const cropHeight = numberInput(crop.height, 0.01, 1, 0.01);
+    cropSizeRow.append(cropWidth, cropHeight);
+    wrapper.appendChild(cropSizeRow);
+
     const apply = (): void => {
       commitTransform(
         { x: posX.valueAsNumber || 0, y: posY.valueAsNumber || 0 },
         scaleInput.valueAsNumber || 1,
         rotationInput.valueAsNumber || 0,
+        {
+          x: clamp01(cropX.valueAsNumber || 0),
+          y: clamp01(cropY.valueAsNumber || 0),
+          width: clampCropSize(cropWidth.valueAsNumber),
+          height: clampCropSize(cropHeight.valueAsNumber),
+        },
       );
     };
     bindCommittedInput(posX, history, apply);
     bindCommittedInput(posY, history, apply);
     bindCommittedInput(scaleInput, history, apply);
     bindCommittedInput(rotationInput, history, apply);
+    bindCommittedInput(cropX, history, apply);
+    bindCommittedInput(cropY, history, apply);
+    bindCommittedInput(cropWidth, history, apply);
+    bindCommittedInput(cropHeight, history, apply);
 
     return wrapper;
+  }
+
+  function clamp01(value: number): number {
+    return Math.min(1, Math.max(0, value || 0));
+  }
+
+  function clampCropSize(value: number): number {
+    return Math.min(1, Math.max(0.01, value || 0.01));
   }
 
   function labelSpan(text: string): HTMLElement {
@@ -515,6 +577,7 @@ export function createLayersPanelContent(store: DocumentStore, history: HistoryM
   }
 
   store.subscribe(render);
+  selectedLayer.subscribe(render);
   render();
 
   return root;

@@ -3,6 +3,7 @@ import type { DocumentStore } from '../document/DocumentStore';
 import type { SelectionEngine, SelectionState } from '../edit/SelectionEngine';
 import { getTileTriangles, getTriangleId, parseTriangleId, type Point, type TriangleHalf } from './tileGeometry';
 import { gradientLine } from './gradient';
+import { computeImageFillGeometry } from './imageFillGeometry';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -208,25 +209,47 @@ export class TruchetRenderer {
     }
     this.defs.appendChild(clipPath);
 
-    // Position/scale/rotation are static numeric inputs for now — interactive
-    // drag/resize/rotate handles are Phase 8 (Image Mask System).
-    const width = grid.columns * fill.scale;
-    const height = width * (asset.height / asset.width);
-    const cx = fill.position.x * grid.columns;
-    const cy = fill.position.y * grid.rows;
+    const geometry = computeImageFillGeometry(fill, asset, grid);
+
+    // The crop rectangle is clipped in the image's own (unrotated) local
+    // space, nested inside the rotation group, so it rotates together with
+    // the image content it bounds rather than staying axis-aligned.
+    const cropClipId = `layer-crop-${layer.id}`;
+    const cropClip = document.createElementNS(SVG_NS, 'clipPath');
+    cropClip.setAttribute('id', cropClipId);
+    const cropRect = document.createElementNS(SVG_NS, 'rect');
+    cropRect.setAttribute('x', String(geometry.displayX));
+    cropRect.setAttribute('y', String(geometry.displayY));
+    cropRect.setAttribute('width', String(geometry.displayWidth));
+    cropRect.setAttribute('height', String(geometry.displayHeight));
+    cropClip.appendChild(cropRect);
+    this.defs.appendChild(cropClip);
+
+    // Triangle mask stays fixed on the grid regardless of the image's own
+    // rotation, so it wraps the rotation group rather than living inside it.
+    const maskGroup = document.createElementNS(SVG_NS, 'g');
+    maskGroup.setAttribute('clip-path', `url(#${clipId})`);
+
+    const rotateGroup = document.createElementNS(SVG_NS, 'g');
+    if (fill.rotation) {
+      rotateGroup.setAttribute('transform', `rotate(${fill.rotation} ${geometry.cx} ${geometry.cy})`);
+    }
+
+    const cropGroup = document.createElementNS(SVG_NS, 'g');
+    cropGroup.setAttribute('clip-path', `url(#${cropClipId})`);
 
     const image = document.createElementNS(SVG_NS, 'image');
     image.setAttribute('href', asset.src);
-    image.setAttribute('x', String(cx - width / 2));
-    image.setAttribute('y', String(cy - height / 2));
-    image.setAttribute('width', String(width));
-    image.setAttribute('height', String(height));
+    image.setAttribute('x', String(geometry.imageX));
+    image.setAttribute('y', String(geometry.imageY));
+    image.setAttribute('width', String(geometry.imageWidth));
+    image.setAttribute('height', String(geometry.imageHeight));
     image.setAttribute('preserveAspectRatio', 'none');
-    image.setAttribute('clip-path', `url(#${clipId})`);
-    if (fill.rotation) {
-      image.setAttribute('transform', `rotate(${fill.rotation} ${cx} ${cy})`);
-    }
-    g.appendChild(image);
+
+    cropGroup.appendChild(image);
+    rotateGroup.appendChild(cropGroup);
+    maskGroup.appendChild(rotateGroup);
+    g.appendChild(maskGroup);
   }
 
   private applyHighlightDiff(state: SelectionState): void {

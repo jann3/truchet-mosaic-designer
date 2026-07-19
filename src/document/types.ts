@@ -33,6 +33,14 @@ export interface NormalizedPoint {
   y: number;
 }
 
+/** A rectangle within an image asset's own pixel space, normalized 0.0–1.0 on both axes. */
+export interface NormalizedRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export type LayerFill =
   | { type: 'solid'; color: string }
   | { type: 'gradient'; angle: number; stops: Array<{ offset: number; color: string }> }
@@ -42,6 +50,8 @@ export type LayerFill =
       position: NormalizedPoint;
       scale: number;
       rotation: number;
+      /** Sub-rectangle of the source asset that's actually shown; `{x:0,y:0,width:1,height:1}` is the full image. */
+      crop: NormalizedRect;
     };
 
 export interface Layer {

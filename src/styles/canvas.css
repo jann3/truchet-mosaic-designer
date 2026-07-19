@@ -30,6 +30,8 @@
   display: block;
   width: 100%;
   height: 100%;
+  /* The rotate handle sits just outside the viewBox; without this it's clipped by the SVG's default overflow:hidden. */
+  overflow: visible;
 }
 
 .truchet-grid__triangle--a {
@@ -64,4 +66,44 @@
  */
 .truchet-grid__layers {
   pointer-events: none;
+}
+
+/*
+ * Phase 8: move/resize/rotate handles for the selected image layer. Only the
+ * handles themselves take pointer events — the group itself is transparent
+ * to clicks so it never blocks grid editing when no image layer is selected.
+ */
+.truchet-grid__overlay {
+  pointer-events: none;
+}
+
+.truchet-grid__overlay-bounds {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 0.03;
+  stroke-dasharray: 0.08 0.06;
+  /* `fill: none` means `auto`/visiblePainted would only hit-test the stroke
+     line — `all` makes the whole rect area (not just its outline) draggable. */
+  pointer-events: all;
+  cursor: move;
+}
+
+.truchet-grid__overlay-rotate-line {
+  stroke: var(--color-accent);
+  stroke-width: 0.02;
+}
+
+.truchet-grid__overlay-handle {
+  fill: var(--color-surface);
+  stroke: var(--color-accent);
+  stroke-width: 0.03;
+  pointer-events: auto;
+}
+
+.truchet-grid__overlay-handle--resize {
+  cursor: nwse-resize;
+}
+
+.truchet-grid__overlay-handle--rotate {
+  cursor: grab;
 }
