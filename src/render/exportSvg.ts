@@ -6,7 +6,10 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const GRID_LINE_COLOR = 'rgba(128, 128, 128, 0.55)';
 const GRID_LINE_WIDTH = 0.015;
-const SEAM_STROKE_WIDTH = 0.02;
+// Screen/raster pixels, not grid units — paired with vector-effect="non-scaling-stroke"
+// below so the seam-sealing stroke stays a constant ~1px at any export resolution or
+// grid size, instead of scaling up into a visible corner overshoot (see canvas.css).
+const SEAM_STROKE_WIDTH = 1;
 
 export interface ExportRenderOptions {
   transparentBackground: boolean;
@@ -82,8 +85,12 @@ function createFilledTriangle(points: readonly Point[], color: string): SVGPolyg
   // Stroking each triangle in its own fill colour closes the hairline seam
   // antialiasing would otherwise leave between adjacent triangles/tiles —
   // invisible by design, unrelated to the visible `includeGridLines` overlay.
+  // Round joins cap the corner overshoot at strokeWidth/2; the default miter
+  // join would spike past the triangle's 45° corners by several times that.
   polygon.setAttribute('stroke', color);
   polygon.setAttribute('stroke-width', String(SEAM_STROKE_WIDTH));
+  polygon.setAttribute('vector-effect', 'non-scaling-stroke');
+  polygon.setAttribute('stroke-linejoin', 'round');
   return polygon;
 }
 

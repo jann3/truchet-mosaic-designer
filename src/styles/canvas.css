@@ -34,16 +34,34 @@
   overflow: visible;
 }
 
+/*
+ * The stroke here isn't a visible border — it's the same colour as the fill,
+ * added only to paper over the hairline antialiasing gap browsers leave
+ * between adjacent triangles. It has to stay a small, constant size in
+ * *screen* pixels, not grid units: a stroke-width defined in grid units
+ * scales up with zoom like the triangle itself, so on a coarse grid (fewer,
+ * bigger tiles — e.g. 4x4) it becomes several device pixels of same-colour
+ * "seal" bleeding past every edge, most visible at corners where multiple
+ * edges meet — triangles read as slightly bulged instead of sharp.
+ * `vector-effect: non-scaling-stroke` keeps `stroke-width` in screen pixels
+ * regardless of the grid's viewBox zoom, and `stroke-linejoin: round` caps
+ * whatever's left of the corner join at strokeWidth/2 instead of the default
+ * miter join's sharper, angle-dependent spike.
+ */
 .truchet-grid__triangle--a {
   fill: var(--color-text);
   stroke: var(--color-text);
-  stroke-width: 0.02;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
 }
 
 .truchet-grid__triangle--b {
   fill: var(--color-surface);
   stroke: var(--color-surface);
-  stroke-width: 0.02;
+  stroke-width: 1px;
+  vector-effect: non-scaling-stroke;
+  stroke-linejoin: round;
 }
 
 .truchet-grid__triangle--a,
