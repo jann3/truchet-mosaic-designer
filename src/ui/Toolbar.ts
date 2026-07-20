@@ -13,6 +13,8 @@ export interface ToolbarHandle {
   openButton: HTMLButtonElement;
   openFileInput: HTMLInputElement;
   projectStatus: HTMLElement;
+  contrastButton: HTMLButtonElement;
+  helpButton: HTMLButtonElement;
 }
 
 function createToggleButton(label: string): HTMLButtonElement {
@@ -59,6 +61,21 @@ function createFileGroup(): {
   return { group, newButton, saveButton, openButton, openFileInput };
 }
 
+function createA11yGroup(): { group: HTMLElement; contrastButton: HTMLButtonElement; helpButton: HTMLButtonElement } {
+  const group = document.createElement('div');
+  group.className = 'toolbar__group';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', 'Accessibility');
+
+  const contrastButton = createActionButton('Contrast', 'Toggle high-contrast mode');
+  contrastButton.setAttribute('aria-pressed', 'false');
+
+  const helpButton = createActionButton('?', 'Keyboard shortcuts');
+
+  group.append(contrastButton, helpButton);
+  return { group, contrastButton, helpButton };
+}
+
 function createModeGroup(editorMode: EditorModeStore): HTMLElement {
   const group = document.createElement('div');
   group.className = 'toolbar__group';
@@ -94,6 +111,7 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
 
   const projectStatus = document.createElement('span');
   projectStatus.className = 'toolbar__project-status';
+  projectStatus.setAttribute('aria-live', 'polite');
 
   const { group: fileGroup, newButton, saveButton, openButton, openFileInput } = createFileGroup();
 
@@ -134,7 +152,19 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
 
   const exportButton = createActionButton('Export', 'Export the design as an image or SVG');
 
-  element.append(brand, projectStatus, fileGroup, historyGroup, modeGroup, spacer, exportButton, panelGroup);
+  const { group: a11yGroup, contrastButton, helpButton } = createA11yGroup();
+
+  element.append(
+    brand,
+    projectStatus,
+    fileGroup,
+    historyGroup,
+    modeGroup,
+    spacer,
+    exportButton,
+    a11yGroup,
+    panelGroup,
+  );
 
   return {
     element,
@@ -148,5 +178,7 @@ export function createToolbar(history: HistoryManager, editorMode: EditorModeSto
     openButton,
     openFileInput,
     projectStatus,
+    contrastButton,
+    helpButton,
   };
 }

@@ -235,8 +235,10 @@ export function createLayersPanelContent(
     const opacityLabel = document.createElement('label');
     opacityLabel.className = 'layers__setting-label';
     opacityLabel.textContent = 'Opacity';
+    opacityLabel.htmlFor = `group-opacity-${group.id}`;
     const opacityRange = document.createElement('input');
     opacityRange.type = 'range';
+    opacityRange.id = `group-opacity-${group.id}`;
     opacityRange.className = 'layers__setting-range';
     opacityRange.min = '0';
     opacityRange.max = '100';
@@ -297,14 +299,44 @@ export function createLayersPanelContent(
   }
 
   function renderItem(layer: Layer, allLayers: Layer[], selections: Selection[], assets: Asset[]): HTMLElement {
+    const isActive = layer.id === selectedLayer.get();
     const item = document.createElement('li');
     item.className = 'layers__item';
-    item.classList.toggle('layers__item--active', layer.id === selectedLayer.get());
+    item.classList.toggle('layers__item--active', isActive);
 
     const row = document.createElement('div');
     row.className = 'layers__item-row';
+    row.dataset.layerId = layer.id;
+    // Not a native <button> because it hosts several nested action buttons
+    // (visibility, move, duplicate, delete) — role/tabIndex/keydown make the
+    // "select this layer" gesture itself keyboard-operable, matching the
+    // existing click-anywhere-on-the-row behaviour.
+    row.setAttribute('role', 'button');
+    row.tabIndex = 0;
+    row.setAttribute('aria-pressed', String(isActive));
+    row.setAttribute(
+      'aria-label',
+      `${layer.name}, ${layer.visible ? 'visible' : 'hidden'}${isActive ? ', selected' : ''}`,
+    );
     row.addEventListener('click', () => {
       selectedLayer.set(selectedLayer.get() === layer.id ? null : layer.id);
+    });
+    row.addEventListener('keydown', (event) => {
+      if (event.target !== row) return;
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        selectedLayer.set(selectedLayer.get() === layer.id ? null : layer.id);
+        // `render()` rebuilds the whole list on every selection change,
+        // destroying `row` — refocus the freshly-created element standing
+        // in for the same layer so keyboard navigation isn't dropped back
+        // to <body>.
+        root.querySelector<HTMLElement>(`[data-layer-id="${layer.id}"]`)?.focus();
+      } else if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        history.record();
+        store.update((doc) => deleteLayer(doc, layer.id));
+        if (selectedLayer.get() === layer.id) selectedLayer.set(null);
+      }
     });
 
     const groupCheckbox = document.createElement('input');
@@ -465,9 +497,11 @@ export function createLayersPanelContent(
     const label = document.createElement('label');
     label.className = 'layers__setting-label';
     label.textContent = 'Opacity';
+    label.htmlFor = `layer-opacity-${layer.id}`;
 
     const range = document.createElement('input');
     range.type = 'range';
+    range.id = `layer-opacity-${layer.id}`;
     range.className = 'layers__setting-range';
     range.min = '0';
     range.max = '100';
@@ -497,8 +531,10 @@ export function createLayersPanelContent(
     const label = document.createElement('label');
     label.className = 'layers__setting-label';
     label.textContent = 'Blend';
+    label.htmlFor = `layer-blend-${layer.id}`;
 
     const select = document.createElement('select');
+    select.id = `layer-blend-${layer.id}`;
     select.className = 'layers__setting-select';
     for (const mode of BLEND_MODES) {
       const option = document.createElement('option');
@@ -523,8 +559,10 @@ export function createLayersPanelContent(
     const label = document.createElement('label');
     label.className = 'layers__setting-label';
     label.textContent = 'Selection';
+    label.htmlFor = `layer-selection-${layer.id}`;
 
     const select = document.createElement('select');
+    select.id = `layer-selection-${layer.id}`;
     select.className = 'layers__setting-select';
 
     const noneOption = document.createElement('option');
@@ -557,8 +595,10 @@ export function createLayersPanelContent(
     const label = document.createElement('label');
     label.className = 'layers__setting-label';
     label.textContent = 'Fill';
+    label.htmlFor = `layer-fill-${layer.id}`;
 
     const select = document.createElement('select');
+    select.id = `layer-fill-${layer.id}`;
     select.className = 'layers__setting-select';
     for (const type of ['solid', 'gradient', 'image'] as const) {
       const option = document.createElement('option');
@@ -590,9 +630,11 @@ export function createLayersPanelContent(
     const label = document.createElement('label');
     label.className = 'layers__setting-label';
     label.textContent = 'Colour';
+    label.htmlFor = `layer-color-${layer.id}`;
 
     const color = document.createElement('input');
     color.type = 'color';
+    color.id = `layer-color-${layer.id}`;
     color.className = 'layers__setting-color';
     color.value = fill.color;
     bindCommittedInput(color, history, () => {
@@ -611,8 +653,10 @@ export function createLayersPanelContent(
     const angleLabel = document.createElement('label');
     angleLabel.className = 'layers__setting-label';
     angleLabel.textContent = 'Angle';
+    angleLabel.htmlFor = `layer-angle-${layer.id}`;
     const angle = document.createElement('input');
     angle.type = 'number';
+    angle.id = `layer-angle-${layer.id}`;
     angle.className = 'layers__setting-number';
     angle.min = '0';
     angle.max = '360';
@@ -634,15 +678,19 @@ export function createLayersPanelContent(
 
     const colorsRow = document.createElement('div');
     colorsRow.className = 'layers__setting-row';
-    const colorsLabel = document.createElement('label');
+    // A <span>, not a <label>: it names two swatches at once, which `for`
+    // can't express — each swatch gets its own `aria-label` below instead.
+    const colorsLabel = document.createElement('span');
     colorsLabel.className = 'layers__setting-label';
     colorsLabel.textContent = 'Colours';
     const startColor = document.createElement('input');
     startColor.type = 'color';
     startColor.className = 'layers__setting-color';
+    startColor.setAttribute('aria-label', 'Gradient start colour');
     startColor.value = fill.stops[0]?.color ?? '#4f8cff';
     const endColor = document.createElement('input');
     endColor.type = 'color';
+    endColor.setAttribute('aria-label', 'Gradient end colour');
     endColor.className = 'layers__setting-color';
     endColor.value = fill.stops[fill.stops.length - 1]?.color ?? '#ffffff';
     bindCommittedInput(startColor, history, commitGradient);
@@ -666,9 +714,11 @@ export function createLayersPanelContent(
     const uploadLabel = document.createElement('label');
     uploadLabel.className = 'layers__setting-label';
     uploadLabel.textContent = 'Image';
+    uploadLabel.htmlFor = `layer-image-${layer.id}`;
 
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
+    fileInput.id = `layer-image-${layer.id}`;
     fileInput.accept = 'image/*';
     fileInput.className = 'layers__setting-file';
     fileInput.addEventListener('change', () => {
@@ -722,22 +772,22 @@ export function createLayersPanelContent(
     const positionRow = document.createElement('div');
     positionRow.className = 'layers__setting-row';
     positionRow.append(labelSpan('Position'));
-    const posX = numberInput(fill.position.x, 0, 1, 0.01);
-    const posY = numberInput(fill.position.y, 0, 1, 0.01);
+    const posX = numberInput(fill.position.x, 0, 1, 0.01, 'Position X');
+    const posY = numberInput(fill.position.y, 0, 1, 0.01, 'Position Y');
     positionRow.append(posX, posY);
     wrapper.appendChild(positionRow);
 
     const scaleRow = document.createElement('div');
     scaleRow.className = 'layers__setting-row';
     scaleRow.append(labelSpan('Scale'));
-    const scaleInput = numberInput(fill.scale, 0.05, 10, 0.05);
+    const scaleInput = numberInput(fill.scale, 0.05, 10, 0.05, 'Scale');
     scaleRow.append(scaleInput);
     wrapper.appendChild(scaleRow);
 
     const rotationRow = document.createElement('div');
     rotationRow.className = 'layers__setting-row';
     rotationRow.append(labelSpan('Rotation'));
-    const rotationInput = numberInput(fill.rotation, -360, 360, 1);
+    const rotationInput = numberInput(fill.rotation, -360, 360, 1, 'Rotation');
     rotationRow.append(rotationInput);
     wrapper.appendChild(rotationRow);
 
@@ -799,16 +849,16 @@ export function createLayersPanelContent(
     const cropPosRow = document.createElement('div');
     cropPosRow.className = 'layers__setting-row';
     cropPosRow.append(labelSpan('Crop XY'));
-    const cropX = numberInput(crop.x, 0, 1, 0.01);
-    const cropY = numberInput(crop.y, 0, 1, 0.01);
+    const cropX = numberInput(crop.x, 0, 1, 0.01, 'Crop X');
+    const cropY = numberInput(crop.y, 0, 1, 0.01, 'Crop Y');
     cropPosRow.append(cropX, cropY);
     wrapper.appendChild(cropPosRow);
 
     const cropSizeRow = document.createElement('div');
     cropSizeRow.className = 'layers__setting-row';
     cropSizeRow.append(labelSpan('Crop WH'));
-    const cropWidth = numberInput(crop.width, 0.01, 1, 0.01);
-    const cropHeight = numberInput(crop.height, 0.01, 1, 0.01);
+    const cropWidth = numberInput(crop.width, 0.01, 1, 0.01, 'Crop width');
+    const cropHeight = numberInput(crop.height, 0.01, 1, 0.01, 'Crop height');
     cropSizeRow.append(cropWidth, cropHeight);
     wrapper.appendChild(cropSizeRow);
 
@@ -845,14 +895,15 @@ export function createLayersPanelContent(
     return Math.min(1, Math.max(0.01, value || 0.01));
   }
 
+  /** A plain visual label — used where one heading names two adjacent inputs (e.g. Position X/Y), so it can't be a `<label for>`; each input gets its own `aria-label` instead. */
   function labelSpan(text: string): HTMLElement {
-    const label = document.createElement('label');
+    const label = document.createElement('span');
     label.className = 'layers__setting-label';
     label.textContent = text;
     return label;
   }
 
-  function numberInput(value: number, min: number, max: number, step: number): HTMLInputElement {
+  function numberInput(value: number, min: number, max: number, step: number, ariaLabel: string): HTMLInputElement {
     const input = document.createElement('input');
     input.type = 'number';
     input.className = 'layers__setting-number';
@@ -860,6 +911,7 @@ export function createLayersPanelContent(
     input.max = String(max);
     input.step = String(step);
     input.value = String(value);
+    input.setAttribute('aria-label', ariaLabel);
     return input;
   }
 

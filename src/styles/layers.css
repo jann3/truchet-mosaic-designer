@@ -56,6 +56,7 @@
 }
 
 .layers__item--active {
+  border-width: 2px;
   border-color: var(--color-accent);
 }
 
@@ -64,6 +65,11 @@
   align-items: center;
   gap: var(--space-xs);
   cursor: pointer;
+}
+
+/* Border width above is the primary (non-colour) active cue; bold the name too so it survives at a glance even without noticing the border. */
+.layers__item--active .layers__item-name {
+  font-weight: 800;
 }
 
 .layers__item-name {

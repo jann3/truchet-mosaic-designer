@@ -9,3 +9,5 @@
 @import './layers.css';
 @import './export.css';
 @import './confirm-dialog.css';
+@import './shortcuts-dialog.css';
+@import './a11y.css';

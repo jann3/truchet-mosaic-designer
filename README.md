@@ -361,3 +361,71 @@ appeared with the target filename in the message; confirmed both Cancel (aborts,
 and loading a deliberately malformed file (shows a "Could not open project" alert with the parse
 error, and — since the failure happens before the store is touched — leaves the current document
 completely unchanged). No console errors in any of these flows.
+
+### Phase 13 — Accessibility & Quality Improvements ✅
+
+**Keyboard grid editing.** Before this phase the Truchet grid itself was pointer-only. Every
+triangle `<polygon>` is now `role="button"` with a roving `tabindex` — `GridEditingController`
+keeps exactly one triangle tab-reachable at a time and moves it with the arrow keys (a per-triangle
+tab stop would make the grid impossible to tab past). Enter/Space mirrors a click (flip the tile in
+edit mode, toggle it in the active selection in select mode, or — with Shift, in edit mode — toggle
+it into the ephemeral multi-selection, mirroring shift-click). Delete/Backspace gives keyboard users
+a deterministic action Enter's toggle can't: reset the tile to its default orientation (edit mode),
+or explicitly exclude the triangle from the active selection (select mode) rather than flip it.
+
+Getting DOM focus to survive an edit took two fixes. First, SVG shapes aren't in the browser's
+default click-focusable set, so `handlePointerDown` calls `event.preventDefault()` before its own
+`.focus()` call — without it, the browser's own post-dispatch focus handling clobbers our focus
+back to `<body>`. Second, both `TruchetRenderer` and `LayersPanel` fully rebuild their DOM
+(`replaceChildren()`) on every relevant change, which destroys whatever was focused; every
+grid/layer interaction that mutates the document re-finds and re-focuses the corresponding element
+(by tile id, or a `data-layer-id` attribute added to layer rows) immediately afterward, so keyboard
+navigation doesn't get dropped back to `<body>` mid-flow. `GridEditingController` also reapplies the
+roving tabindex on *every* document change via its own `store.subscribe` (registered after
+`TruchetRenderer`'s, so it runs against the already-rebuilt DOM) — otherwise a mouse-driven edit
+would silently leave the grid with no tab stop at all.
+
+**Global shortcuts.** `edit/GlobalShortcuts.ts` wires Ctrl/Cmd+S (save), Ctrl/Cmd+O (open),
+Ctrl/Cmd+N (new), and `?` (shortcuts help) at the window level — deliberately by simulating clicks
+on the existing toolbar buttons rather than duplicating their logic, so e.g. Ctrl+N still goes
+through the toolbar's own dirty-document confirmation flow. `?` is guarded by the existing
+typing-target check (extracted to `utils/isTypingTarget.ts`, now shared with
+`GridEditingController`'s undo/redo/Escape handler) so it doesn't fire while renaming a layer to
+something ending in "?". `ui/ShortcutsDialog.ts` is a static reference modal (same backdrop-modal
+pattern as `ExportDialog`/`ConfirmDialog`) listing every shortcut in the app, opened from the
+toolbar's "?" button or the key itself.
+
+**ARIA.** Every triangle gets an `aria-label` ("Row 3, column 7, black triangle") and `aria-pressed`
+kept in sync with the selected-triangle highlight; the grid `<svg>` gets a dimension-describing
+`aria-label` and `aria-describedby` pointing at a visually-hidden instructions paragraph
+(`CanvasArea.ts`). `SelectionsPanel` gained a visually-hidden `aria-live="polite"` region announcing
+the active selection's triangle count on every change — appended once and never torn down by the
+panel's own re-renders, since removing and re-inserting a live region can make some screen readers
+stop treating it as live. Layer rows (`LayersPanel.ts`) were previously a `<div>` with only a click
+handler — not reachable by keyboard at all; they're now `role="button"` with `tabIndex`, a
+descriptive `aria-label`, and `aria-pressed`. Every range/select/color/file input across
+`LayersPanel.ts` (opacity, blend mode, selection, fill type, colours) now has a properly associated
+`<label for>`; the handful of fields where one heading labels two adjacent inputs at once (gradient
+colours, image position/scale/rotation/crop) use a plain `<span>` heading plus a per-input
+`aria-label` instead, since `for` can't target two inputs.
+
+**Visual accessibility.** Toggle buttons (`aria-pressed="true"`) now carry bold weight and an
+underline in addition to the accent background, and the active layer/selection list item bolds its
+name — neither state relies on colour alone. `styles/a11y.css` adds a `.visually-hidden` utility, an
+app-wide `:focus-visible` outline, and a **high-contrast mode**: a toolbar toggle (persisted to
+`localStorage`, `ui/preferences.ts`) sets `data-theme="high-contrast"` on `<html>`, remapping the
+theme's CSS variables to a pure black/white/yellow palette; a `prefers-contrast: more` media query
+applies the same palette automatically until the user makes an explicit choice. The grid's own
+focus ring couldn't reuse the generic `outline` rule — the SVG viewBox is in tile units (often under
+a dozen across), not CSS pixels, so a `2px` outline would render several tiles wide — so focused
+triangles instead get a dashed `stroke` sized in the same fractional units as the existing
+hover/selected highlights, keeping it visually distinct from the (solid) selected-triangle stroke.
+
+Verified in-browser: tabbed/arrow-keyed across the grid and confirmed the dashed focus ring tracked
+correctly, including immediately after an Enter-triggered flip (DOM rebuild) restored focus to the
+same triangle rather than dropping to `<body>`; toggled a triangle into a selection with Enter and
+watched the live region announce the updated count, then excluded it again with Delete; focused a
+layer row directly, toggled it selected with Enter and confirmed focus survived the panel's
+re-render, then deleted it with Delete; opened the shortcuts dialog with `?` and closed it with
+Escape; toggled high-contrast mode and confirmed the palette swap and `localStorage` persistence
+across reload. No console errors in any of these flows.

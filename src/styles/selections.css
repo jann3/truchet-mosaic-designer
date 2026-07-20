@@ -1,10 +1,13 @@
 .selections {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
   margin-top: var(--space-lg);
   padding-top: var(--space-lg);
   border-top: 1px solid var(--color-border);
+}
+
+.selections__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
 }
 
 .selections__header-row {
@@ -60,6 +63,10 @@
 .selections__item--active {
   background: var(--color-bg);
   border-color: var(--color-accent);
+}
+
+.selections__item--active .selections__item-name {
+  font-weight: 700;
 }
 
 .selections__item-name {

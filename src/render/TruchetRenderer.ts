@@ -1,4 +1,4 @@
-import type { Grid, TruchetDocument } from '../document/types';
+import type { Grid, Tile, TruchetDocument } from '../document/types';
 import type { DocumentStore } from '../document/DocumentStore';
 import type { SelectionEngine, SelectionState } from '../edit/SelectionEngine';
 import { getTileTriangles, getTriangleId, type Point, type TriangleHalf } from './tileGeometry';
@@ -11,8 +11,16 @@ const EMPTY_SELECTION_STATE: SelectionState = { hoveredTriangleId: null, selecte
 const HOVER_CLASS = 'truchet-grid__triangle--hover';
 const SELECTED_CLASS = 'truchet-grid__triangle--selected';
 
+/** DOM id of the visually-hidden instructions paragraph `CanvasArea` renders alongside the grid, referenced via `aria-describedby`. */
+export const GRID_INSTRUCTIONS_ID = 'truchet-grid-instructions';
+
 function pointsToString(points: readonly Point[]): string {
   return points.map(([x, y]) => `${x},${y}`).join(' ');
+}
+
+function triangleLabel(tile: Tile, half: TriangleHalf): string {
+  const colour = half === 'a' ? 'black' : 'white';
+  return `Row ${tile.row + 1}, column ${tile.column + 1}, ${colour} triangle`;
 }
 
 /**
@@ -42,6 +50,8 @@ export class TruchetRenderer {
   constructor(container: HTMLElement, store: DocumentStore, selectionEngine: SelectionEngine) {
     this.svg = document.createElementNS(SVG_NS, 'svg');
     this.svg.classList.add('truchet-grid');
+    this.svg.setAttribute('role', 'group');
+    this.svg.setAttribute('aria-describedby', GRID_INSTRUCTIONS_ID);
 
     this.defs = document.createElementNS(SVG_NS, 'defs');
     this.baseGroup = document.createElementNS(SVG_NS, 'g');
@@ -65,6 +75,7 @@ export class TruchetRenderer {
 
   private render(doc: TruchetDocument, selectionState: SelectionState): void {
     this.svg.setAttribute('viewBox', `0 0 ${doc.grid.columns} ${doc.grid.rows}`);
+    this.svg.setAttribute('aria-label', `Truchet grid, ${doc.grid.rows} rows by ${doc.grid.columns} columns`);
     this.renderBase(doc.grid);
     this.renderLayers(doc);
 
@@ -82,24 +93,27 @@ export class TruchetRenderer {
     const fragment = document.createDocumentFragment();
     for (const tile of grid.tiles) {
       const { a, b } = getTileTriangles(tile);
-      fragment.appendChild(this.createTriangle(tile.id, 'a', a.points, 'truchet-grid__triangle--a'));
-      fragment.appendChild(this.createTriangle(tile.id, 'b', b.points, 'truchet-grid__triangle--b'));
+      fragment.appendChild(this.createTriangle(tile, 'a', a.points, 'truchet-grid__triangle--a'));
+      fragment.appendChild(this.createTriangle(tile, 'b', b.points, 'truchet-grid__triangle--b'));
     }
     this.baseGroup.appendChild(fragment);
   }
 
-  private createTriangle(
-    tileId: string,
-    half: TriangleHalf,
-    points: readonly Point[],
-    className: string,
-  ): SVGPolygonElement {
+  private createTriangle(tile: Tile, half: TriangleHalf, points: readonly Point[], className: string): SVGPolygonElement {
     const polygon = document.createElementNS(SVG_NS, 'polygon');
     polygon.setAttribute('points', pointsToString(points));
     polygon.classList.add(className);
-    polygon.dataset.tileId = tileId;
+    polygon.dataset.tileId = tile.id;
     polygon.dataset.half = half;
-    this.triangleElements.set(getTriangleId(tileId, half), polygon);
+    // Keyboard operability (Phase 13): every triangle is a real focusable
+    // button-role element. `GridEditingController` maintains a roving
+    // tabindex (exactly one triangle at a time is tab-reachable) since a
+    // per-triangle tab stop would make the grid untabbable-past.
+    polygon.setAttribute('role', 'button');
+    polygon.tabIndex = -1;
+    polygon.setAttribute('aria-label', triangleLabel(tile, half));
+    polygon.setAttribute('aria-pressed', 'false');
+    this.triangleElements.set(getTriangleId(tile.id, half), polygon);
     return polygon;
   }
 
@@ -129,6 +143,9 @@ export class TruchetRenderer {
 
   private setHighlightClass(triangleId: string | null, className: string, on: boolean): void {
     if (!triangleId) return;
-    this.triangleElements.get(triangleId)?.classList.toggle(className, on);
+    const element = this.triangleElements.get(triangleId);
+    if (!element) return;
+    element.classList.toggle(className, on);
+    if (className === SELECTED_CLASS) element.setAttribute('aria-pressed', String(on));
   }
 }

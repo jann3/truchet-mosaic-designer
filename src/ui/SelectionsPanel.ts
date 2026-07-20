@@ -34,15 +34,36 @@ export function createSelectionsPanel(
   const root = document.createElement('div');
   root.className = 'selections';
 
+  // Announces the active selection's triangle count to screen readers
+  // whenever it changes — the visible count badge next to each list item has
+  // no equivalent for someone who can't see the list update live. Appended
+  // once and never removed by `body.replaceChildren()` below: tearing a live
+  // region out of the DOM and back in on every render can make some
+  // screen readers stop treating it as "live".
+  const liveRegion = document.createElement('p');
+  liveRegion.className = 'selections__live-region visually-hidden';
+  liveRegion.setAttribute('aria-live', 'polite');
+  liveRegion.setAttribute('aria-atomic', 'true');
+  root.appendChild(liveRegion);
+
+  const body = document.createElement('div');
+  body.className = 'selections__body';
+  root.appendChild(body);
+
   const render = (): void => {
-    root.replaceChildren();
+    body.replaceChildren();
     const document_ = store.get();
     const activeId = activeSelection.get();
     const activeSel = document_.selections.find((s) => s.id === activeId) ?? null;
+    const totalTriangles = document_.grid.rows * document_.grid.columns * 2;
 
-    root.appendChild(renderHeader());
-    root.appendChild(renderList(document_.selections, activeId));
-    root.appendChild(renderTools(activeSel));
+    liveRegion.textContent = activeSel
+      ? `${activeSel.name}: ${activeSel.triangleIds.length} of ${totalTriangles} triangles selected.`
+      : 'No selection active.';
+
+    body.appendChild(renderHeader());
+    body.appendChild(renderList(document_.selections, activeId));
+    body.appendChild(renderTools(activeSel));
   };
 
   function renderHeader(): HTMLElement {
@@ -100,11 +121,13 @@ export function createSelectionsPanel(
     nameButton.type = 'button';
     nameButton.className = 'selections__item-name';
     nameButton.textContent = selection.name;
+    nameButton.setAttribute('aria-current', String(isActive));
     nameButton.addEventListener('click', () => activate(activeSelection, editorMode, selection.id));
 
     const count = document.createElement('span');
     count.className = 'selections__item-count';
     count.textContent = String(selection.triangleIds.length);
+    count.setAttribute('aria-label', `${selection.triangleIds.length} triangles`);
 
     const renameButton = document.createElement('button');
     renameButton.type = 'button';
@@ -213,8 +236,8 @@ export function createSelectionsPanel(
     orientationRow.className = 'selections__tools-row';
     orientationRow.append(
       createLabel('Orientation'),
-      createToolButton('╲', () => apply((grid) => selectByOrientation(grid, 'diagonal-a'))),
-      createToolButton('╱', () => apply((grid) => selectByOrientation(grid, 'diagonal-b'))),
+      createToolButton('╲', () => apply((grid) => selectByOrientation(grid, 'diagonal-a')), 'Diagonal top-left to bottom-right'),
+      createToolButton('╱', () => apply((grid) => selectByOrientation(grid, 'diagonal-b')), 'Diagonal top-right to bottom-left'),
     );
 
     const grid = store.get().grid;
@@ -227,11 +250,12 @@ export function createSelectionsPanel(
     return tools;
   }
 
-  function createToolButton(label: string, onClick: () => void): HTMLButtonElement {
+  function createToolButton(label: string, onClick: () => void, ariaLabel?: string): HTMLButtonElement {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'selections__tool-button';
     button.textContent = label;
+    if (ariaLabel) button.setAttribute('aria-label', ariaLabel);
     button.addEventListener('click', onClick);
     return button;
   }
@@ -253,6 +277,7 @@ export function createSelectionsPanel(
     input.min = '0';
     input.max = String(Math.max(0, max));
     input.value = '0';
+    input.setAttribute('aria-label', `${label} index`);
 
     const button = createToolButton(`Select ${label}`, () => {
       const index = Math.min(Math.max(0, Math.round(input.valueAsNumber || 0)), max);

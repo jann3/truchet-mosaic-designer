@@ -10,7 +10,10 @@ import { createInspectorPanelContent } from './InspectorPanel';
 import { createCanvasArea } from './CanvasArea';
 import { createExportDialog } from './ExportDialog';
 import { createConfirmDialog } from './ConfirmDialog';
+import { createShortcutsDialog } from './ShortcutsDialog';
 import { ProjectController } from '../project/ProjectController';
+import { GlobalShortcuts } from '../edit/GlobalShortcuts';
+import { initHighContrastPreference, isHighContrastEnabled, toggleHighContrast } from './preferences';
 
 const PANEL_MIN_WIDTH = 160;
 const PANEL_MAX_WIDTH = 448;
@@ -134,6 +137,22 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
       });
   }
 
+  const shortcutsDialog = createShortcutsDialog();
+  toolbar.helpButton.addEventListener('click', () => shortcutsDialog.open());
+
+  new GlobalShortcuts({
+    save: toolbar.saveButton,
+    open: toolbar.openButton,
+    newProject: toolbar.newButton,
+    help: toolbar.helpButton,
+  });
+
+  initHighContrastPreference();
+  toolbar.contrastButton.setAttribute('aria-pressed', String(isHighContrastEnabled()));
+  toolbar.contrastButton.addEventListener('click', () => {
+    toolbar.contrastButton.setAttribute('aria-pressed', String(toggleHighContrast()));
+  });
+
   shell.append(
     toolbar.element,
     layersPanel.element,
@@ -141,6 +160,7 @@ export function createAppShell(store: DocumentStore, history: HistoryManager): H
     inspectorPanel.element,
     exportDialog.element,
     confirmDialog.element,
+    shortcutsDialog.element,
   );
 
   return shell;

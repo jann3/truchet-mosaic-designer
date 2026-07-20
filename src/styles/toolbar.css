@@ -48,9 +48,13 @@
   background: var(--color-bg);
 }
 
+/* Bold weight plus an underline give pressed state a cue beyond colour alone. */
 .toolbar__button[aria-pressed='true'] {
   background: var(--color-accent);
   color: var(--color-accent-contrast);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .toolbar__button:disabled {
