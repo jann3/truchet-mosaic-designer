@@ -73,9 +73,17 @@
   opacity: 0.85;
 }
 
+/*
+ * Like the base triangle strokes above, this needs `non-scaling-stroke`
+ * (inherited from `.truchet-grid__triangle--a`/`--b`) to stay a constant
+ * screen size, so its width has to be a *pixel* value too — a grid-unit
+ * value here (as before) rendered as a fraction of a screen pixel and was
+ * effectively invisible. 3px reads clearly as an outline at any zoom level
+ * or grid density.
+ */
 .truchet-grid__triangle--selected {
   stroke: var(--color-accent);
-  stroke-width: 0.05;
+  stroke-width: 3px;
 }
 
 /*

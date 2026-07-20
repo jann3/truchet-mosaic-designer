@@ -57,11 +57,24 @@ function pointsForTriangle(tileById: Map<string, Tile>, triangleId: string): rea
   return half === 'a' ? a.points : b.points;
 }
 
+function appendSeamStroke(polygon: SVGPolygonElement, paint: string): void {
+  // Matches the base grid's own seam-sealing trick (see canvas.css): without
+  // a same-colour stroke, the hairline antialiasing gap between adjacent
+  // triangles lets the base grid's black/white stroke show through the
+  // layer's fill, standing out as thin lines wherever a layer recolours
+  // tiles away from that default palette.
+  polygon.setAttribute('stroke', paint);
+  polygon.setAttribute('stroke-width', '1');
+  polygon.style.vectorEffect = 'non-scaling-stroke';
+  polygon.setAttribute('stroke-linejoin', 'round');
+}
+
 function appendSolidTriangles(g: SVGGElement, trianglePoints: readonly (readonly Point[])[], color: string): void {
   for (const points of trianglePoints) {
     const polygon = document.createElementNS(SVG_NS, 'polygon');
     polygon.setAttribute('points', pointsToString(points));
     polygon.setAttribute('fill', color);
+    appendSeamStroke(polygon, color);
     g.appendChild(polygon);
   }
 }
@@ -97,6 +110,7 @@ function appendGradientTriangles(
     const polygon = document.createElementNS(SVG_NS, 'polygon');
     polygon.setAttribute('points', pointsToString(points));
     polygon.setAttribute('fill', `url(#${gradientId})`);
+    appendSeamStroke(polygon, `url(#${gradientId})`);
     g.appendChild(polygon);
   }
 }

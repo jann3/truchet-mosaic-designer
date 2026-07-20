@@ -60,13 +60,30 @@
   border: 1px solid transparent;
 }
 
+/* Mirrors `.toolbar__button[aria-pressed='true']`'s solid-fill treatment so the actively-edited selection reads as unmistakably "on" rather than just faintly outlined. */
 .selections__item--active {
-  background: var(--color-bg);
+  background: var(--color-accent);
   border-color: var(--color-accent);
 }
 
 .selections__item--active .selections__item-name {
+  color: var(--color-accent-contrast);
   font-weight: 700;
+}
+
+.selections__item--active .selections__item-count {
+  color: var(--color-accent-contrast);
+  opacity: 0.85;
+}
+
+.selections__item--active .selections__item-action {
+  color: var(--color-accent-contrast);
+  opacity: 0.85;
+}
+
+.selections__item--active .selections__item-action:hover {
+  color: var(--color-accent-contrast);
+  opacity: 1;
 }
 
 .selections__item-name {
