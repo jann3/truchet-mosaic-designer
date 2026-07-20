@@ -1,5 +1,5 @@
 import type { TruchetDocument } from '../document/types';
-import { isTruchetDocumentShape, PROJECT_FORMAT_VERSION } from './serialization';
+import { isTruchetDocumentShape, migrateDocument, PROJECT_FORMAT_VERSION } from './serialization';
 
 const STORAGE_KEY = 'truchet-mosaic-designer:autosave';
 
@@ -32,7 +32,7 @@ export function readAutosave(): AutosaveEntry | null {
     if (typeof record.savedAt !== 'number' || !isTruchetDocumentShape(record.document)) {
       return null;
     }
-    return { savedAt: record.savedAt, document: record.document };
+    return { savedAt: record.savedAt, document: migrateDocument(record.document) };
   } catch {
     return null;
   }

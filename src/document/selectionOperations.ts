@@ -1,5 +1,5 @@
-import type { Grid, TileOrientation } from './types';
-import { getTriangleId, type TriangleHalf } from '../render/tileGeometry';
+import type { Grid } from './types';
+import { diagonalDirectionOf, getTriangleId, type DiagonalDirection, type TriangleHalf } from '../render/tileGeometry';
 
 /** Every triangle in the grid — both halves of every tile. */
 export function selectAll(grid: Grid): string[] {
@@ -15,11 +15,11 @@ export function selectByHalf(grid: Grid, half: TriangleHalf): string[] {
   return grid.tiles.map((tile) => getTriangleId(tile.id, half));
 }
 
-/** Both triangles of every tile whose orientation matches. */
-export function selectByOrientation(grid: Grid, orientation: TileOrientation): string[] {
+/** Both triangles of every tile whose diagonal line runs in the given direction, regardless of which side is dark. */
+export function selectByOrientation(grid: Grid, direction: DiagonalDirection): string[] {
   const ids: string[] = [];
   for (const tile of grid.tiles) {
-    if (tile.orientation !== orientation) continue;
+    if (diagonalDirectionOf(tile.orientation) !== direction) continue;
     ids.push(getTriangleId(tile.id, 'a'), getTriangleId(tile.id, 'b'));
   }
   return ids;

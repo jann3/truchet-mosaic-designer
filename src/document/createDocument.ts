@@ -3,7 +3,7 @@ import { generateId } from './generateId';
 
 const DEFAULT_COLUMNS = 8;
 const DEFAULT_ROWS = 8;
-const DEFAULT_ORIENTATION: TileOrientation = 'diagonal-a';
+const DEFAULT_ORIENTATION: TileOrientation = 'black-top-right';
 
 export function createTile(row: number, column: number, orientation: TileOrientation = DEFAULT_ORIENTATION): Tile {
   return { id: `r${row}c${column}`, row, column, orientation };

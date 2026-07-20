@@ -28,8 +28,9 @@ export interface TileTriangles {
 
 /**
  * The two triangles a tile splits into, as grid-space coordinates (each tile
- * occupies one unit square at its column/row). 'diagonal-a' splits along
- * top-left→bottom-right; 'diagonal-b' splits along top-right→bottom-left.
+ * occupies one unit square at its column/row). `a` (dark) is always the
+ * triangle occupying the orientation's named corner; `b` (light) is the
+ * other half of whichever diagonal that implies.
  */
 export function getTileTriangles(tile: Pick<Tile, 'row' | 'column' | 'orientation'>): TileTriangles {
   const x0 = tile.column;
@@ -42,15 +43,33 @@ export function getTileTriangles(tile: Pick<Tile, 'row' | 'column' | 'orientatio
   const bottomLeft: Point = [x0, y1];
   const bottomRight: Point = [x1, y1];
 
-  if (tile.orientation === 'diagonal-a') {
-    return {
-      a: { points: [topLeft, topRight, bottomRight] },
-      b: { points: [topLeft, bottomRight, bottomLeft] },
-    };
+  switch (tile.orientation) {
+    case 'black-top-right':
+      return {
+        a: { points: [topLeft, topRight, bottomRight] },
+        b: { points: [topLeft, bottomRight, bottomLeft] },
+      };
+    case 'black-bottom-left':
+      return {
+        a: { points: [topLeft, bottomRight, bottomLeft] },
+        b: { points: [topLeft, topRight, bottomRight] },
+      };
+    case 'black-top-left':
+      return {
+        a: { points: [topLeft, topRight, bottomLeft] },
+        b: { points: [topRight, bottomRight, bottomLeft] },
+      };
+    case 'black-bottom-right':
+      return {
+        a: { points: [topRight, bottomRight, bottomLeft] },
+        b: { points: [topLeft, topRight, bottomLeft] },
+      };
   }
+}
 
-  return {
-    a: { points: [topLeft, topRight, bottomLeft] },
-    b: { points: [topRight, bottomRight, bottomLeft] },
-  };
+/** The diagonal line shape an orientation renders, ignoring which side is dark — two orientations share each line. */
+export type DiagonalDirection = 'tl-br' | 'tr-bl';
+
+export function diagonalDirectionOf(orientation: Tile['orientation']): DiagonalDirection {
+  return orientation === 'black-top-right' || orientation === 'black-bottom-left' ? 'tl-br' : 'tr-bl';
 }

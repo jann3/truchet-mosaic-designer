@@ -59,6 +59,14 @@ export function createGridConfigPanel(store: DocumentStore, history: HistoryMana
     rows: initialGrid.rows,
     pattern: 'uniform' as GridPattern,
     seed: randomSeed(),
+    // Where each pattern's next "Generate" starts in the black-corner cycle —
+    // advances per pattern so repeated clicks visibly rotate the result
+    // instead of reproducing the same grid, and each pattern remembers its
+    // own place in the cycle independently of the others.
+    variants: { uniform: 0, 'alternate-rows': 0, 'alternate-counter-clockwise': 0, random: 0 } as Record<
+      GridPattern,
+      number
+    >,
   };
 
   const form = document.createElement('form');
@@ -165,10 +173,12 @@ export function createGridConfigPanel(store: DocumentStore, history: HistoryMana
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     history.record();
+    const variant = state.variants[state.pattern];
     store.update((doc) => ({
       ...doc,
-      grid: generatePatternedGrid(state.columns, state.rows, state.pattern, state.seed),
+      grid: generatePatternedGrid(state.columns, state.rows, state.pattern, state.seed, variant),
     }));
+    state.variants[state.pattern] = (variant + 1) % 4;
   });
 
   form.appendChild(createSymmetrySection(store, history));

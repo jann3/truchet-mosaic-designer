@@ -9,7 +9,7 @@ import type { EditorModeStore } from './EditorModeStore';
 import type { HistoryManager } from './HistoryManager';
 import { SelectionEngine } from './SelectionEngine';
 
-const DEFAULT_ORIENTATION: TileOrientation = 'diagonal-a';
+const DEFAULT_ORIENTATION: TileOrientation = 'black-top-right';
 
 interface TriangleTarget {
   tileId: string;

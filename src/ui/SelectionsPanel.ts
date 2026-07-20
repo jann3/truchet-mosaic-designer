@@ -236,8 +236,8 @@ export function createSelectionsPanel(
     orientationRow.className = 'selections__tools-row';
     orientationRow.append(
       createLabel('Orientation'),
-      createToolButton('╲', () => apply((grid) => selectByOrientation(grid, 'diagonal-a')), 'Diagonal top-left to bottom-right'),
-      createToolButton('╱', () => apply((grid) => selectByOrientation(grid, 'diagonal-b')), 'Diagonal top-right to bottom-left'),
+      createToolButton('╲', () => apply((grid) => selectByOrientation(grid, 'tl-br')), 'Diagonal top-left to bottom-right'),
+      createToolButton('╱', () => apply((grid) => selectByOrientation(grid, 'tr-bl')), 'Diagonal top-right to bottom-left'),
     );
 
     const grid = store.get().grid;

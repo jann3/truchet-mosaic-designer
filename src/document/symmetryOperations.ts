@@ -1,9 +1,29 @@
 import type { Grid, TileOrientation } from './types';
 import { createTile } from './createDocument';
 
-function swapOrientation(orientation: TileOrientation): TileOrientation {
-  return orientation === 'diagonal-a' ? 'diagonal-b' : 'diagonal-a';
-}
+/** Corner the dark triangle lands on after reflecting the tile pattern left-right (top/bottom unchanged, left/right swap). */
+const HORIZONTAL_MIRROR: Record<TileOrientation, TileOrientation> = {
+  'black-top-left': 'black-top-right',
+  'black-top-right': 'black-top-left',
+  'black-bottom-left': 'black-bottom-right',
+  'black-bottom-right': 'black-bottom-left',
+};
+
+/** Corner the dark triangle lands on after reflecting the tile pattern top-bottom (left/right unchanged, top/bottom swap). */
+const VERTICAL_MIRROR: Record<TileOrientation, TileOrientation> = {
+  'black-top-left': 'black-bottom-left',
+  'black-bottom-left': 'black-top-left',
+  'black-top-right': 'black-bottom-right',
+  'black-bottom-right': 'black-top-right',
+};
+
+/** Corner the dark triangle lands on after a 180° rotation (opposite corner). */
+const ROTATE_180: Record<TileOrientation, TileOrientation> = {
+  'black-top-left': 'black-bottom-right',
+  'black-bottom-right': 'black-top-left',
+  'black-top-right': 'black-bottom-left',
+  'black-bottom-left': 'black-top-right',
+};
 
 /**
  * Rebuilds the grid by, for every tile position, pulling the orientation from
@@ -27,17 +47,17 @@ function remapGrid(
   return { ...grid, tiles };
 }
 
-/** Reflects the tile pattern left-right. A diagonal running TL→BR mirrors into one running TR→BL, so orientation flips too. */
+/** Reflects the tile pattern left-right — each tile's dark corner mirrors from left to right (or vice versa). */
 export function mirrorHorizontal(grid: Grid): Grid {
-  return remapGrid(grid, (row, column) => [row, grid.columns - 1 - column], swapOrientation);
+  return remapGrid(grid, (row, column) => [row, grid.columns - 1 - column], (o) => HORIZONTAL_MIRROR[o]);
 }
 
-/** Reflects the tile pattern top-bottom. Same diagonal-flip reasoning as `mirrorHorizontal`, just across the other axis. */
+/** Reflects the tile pattern top-bottom — each tile's dark corner mirrors from top to bottom (or vice versa). */
 export function mirrorVertical(grid: Grid): Grid {
-  return remapGrid(grid, (row, column) => [grid.rows - 1 - row, column], swapOrientation);
+  return remapGrid(grid, (row, column) => [grid.rows - 1 - row, column], (o) => VERTICAL_MIRROR[o]);
 }
 
-/** Rotates the tile pattern 180°. Each diagonal maps onto itself under a half-turn, so orientation is unchanged. */
+/** Rotates the tile pattern 180° — each tile's dark corner moves to the opposite corner. */
 export function rotate180(grid: Grid): Grid {
-  return remapGrid(grid, (row, column) => [grid.rows - 1 - row, grid.columns - 1 - column], (orientation) => orientation);
+  return remapGrid(grid, (row, column) => [grid.rows - 1 - row, grid.columns - 1 - column], (o) => ROTATE_180[o]);
 }

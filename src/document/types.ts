@@ -1,9 +1,11 @@
 /**
- * Truchet tiles are unit squares split by one diagonal into two triangles.
- * Orientation names the diagonal: 'a' runs top-left→bottom-right, 'b' runs
- * top-right→bottom-left. Flipping a tile toggles between the two.
+ * Truchet tiles are unit squares split by one diagonal into two triangles,
+ * one dark and one light. Orientation names which corner the dark triangle
+ * occupies — the diagonal itself (and which two corners it shares with the
+ * light triangle) follows from that. Flipping a tile cycles through all four
+ * corners: top-left → bottom-left → bottom-right → top-right → top-left.
  */
-export type TileOrientation = 'diagonal-a' | 'diagonal-b';
+export type TileOrientation = 'black-top-left' | 'black-bottom-left' | 'black-bottom-right' | 'black-top-right';
 
 export interface Tile {
   id: string;

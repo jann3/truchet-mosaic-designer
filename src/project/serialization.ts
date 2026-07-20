@@ -1,6 +1,24 @@
-import type { TruchetDocument } from '../document/types';
+import type { Tile, TileOrientation, TruchetDocument } from '../document/types';
 
 export const PROJECT_FORMAT_VERSION = 1;
+
+/** Orientation values from before tile colour became independent of the diagonal — both locked the dark triangle to a top corner. */
+const LEGACY_ORIENTATION: Record<string, TileOrientation> = {
+  'diagonal-a': 'black-top-right',
+  'diagonal-b': 'black-top-left',
+};
+
+/** Remaps any tile still using the pre-four-corner orientation scheme so older saves keep their exact appearance. */
+export function migrateDocument(doc: TruchetDocument): TruchetDocument {
+  let changed = false;
+  const tiles: Tile[] = doc.grid.tiles.map((tile) => {
+    const legacy = LEGACY_ORIENTATION[tile.orientation as string];
+    if (!legacy) return tile;
+    changed = true;
+    return { ...tile, orientation: legacy };
+  });
+  return changed ? { ...doc, grid: { ...doc.grid, tiles } } : doc;
+}
 
 export interface ProjectFile {
   version: number;
@@ -49,5 +67,5 @@ export function deserializeDocument(json: string): TruchetDocument {
   if (!isTruchetDocumentShape(file.document)) {
     throw new ProjectFileError('Not a valid Truchet project file.');
   }
-  return file.document;
+  return migrateDocument(file.document);
 }
