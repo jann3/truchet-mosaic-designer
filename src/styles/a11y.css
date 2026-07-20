@@ -27,10 +27,21 @@
  * stroke-based ring sized in the same units as the existing hover/selected
  * highlights instead, with a dashed pattern so it stays visually distinct
  * from the (solid) selected-triangle stroke even for colour-blind users.
+ *
+ * The unconditional `outline: none` (not just under `:focus-visible`) matters
+ * on its own: browsers paint their native "auto" outline for a non-rectangular
+ * SVG shape as a large ellipse around its bounding box, and `GridEditingController`
+ * calls `.focus()` on every click (to keep keyboard nav picking up from the
+ * last pointer interaction) — which some browsers treat as focus-visible-worthy
+ * even for a mouse click, showing that ellipse instead of our custom ring.
  */
+.truchet-grid__triangle--a,
+.truchet-grid__triangle--b {
+  outline: none;
+}
+
 .truchet-grid__triangle--a:focus-visible,
 .truchet-grid__triangle--b:focus-visible {
-  outline: none;
   stroke: var(--color-accent);
   stroke-width: 0.06;
   stroke-dasharray: 0.04 0.04;

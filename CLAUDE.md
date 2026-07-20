@@ -10,40 +10,10 @@ The recommended implementation sequence:
 
 ---
 
-Phases 1–12 (application shell, document model, grid rendering, grid configuration controls, grid
+Phases 1–13 (application shell, document model, grid rendering, grid configuration controls, grid
 editing UX, selection system, layer system, image mask system, advanced composition tools, responsive
-design adaptation, export system, save/load/project files) are complete — see `README.md`'s
-"Implementation progress" section for what shipped and where.
-
----
-
-# Phase 13 — Accessibility & Quality Improvements
-
-## Goal
-
-Make the editor usable by a broad audience.
-
-## Implement
-
-Keyboard controls:
-
-* arrows
-* delete
-* undo
-* redo
-* shortcuts
-
-ARIA:
-
-* labelled controls
-* layer descriptions
-* selection summaries
-
-Visual accessibility:
-
-* avoid colour-only indicators
-* high contrast mode
-* scalable UI
+design adaptation, export system, save/load/project files, accessibility & quality improvements) are
+complete — see `README.md`'s "Implementation progress" section for what shipped and where.
 
 ---
 
